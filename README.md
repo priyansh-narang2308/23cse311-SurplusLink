@@ -30,3 +30,7 @@ A smart food redistribution platform that connects surplus food donors (like res
 ---
 
 > This project is part of the review for our coursework named Software Engineering for the year 2025-2026.
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 – see the [LICENSE](./LICENSE) file for details.
