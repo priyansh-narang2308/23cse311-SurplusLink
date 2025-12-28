@@ -1,0 +1,264 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    /* Fresh sustainability green palette */
+    --background: 120 20% 99%;
+    --foreground: 160 30% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 160 30% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 30% 10%;
+
+    /* Primary - Fresh Green */
+    --primary: 152 60% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft sage */
+    --secondary: 145 25% 94%;
+    --secondary-foreground: 160 30% 20%;
+
+    /* Muted */
+    --muted: 150 15% 95%;
+    --muted-foreground: 160 15% 45%;
+
+    /* Accent - Warm coral */
+    --accent: 16 85% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 20% 90%;
+    --input: 150 20% 90%;
+    --ring: 152 60% 36%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --success: 152 60% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 95% 50%;
+    --warning-foreground: 0 0% 10%;
+    --info: 200 85% 50%;
+    --info-foreground: 0 0% 100%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(152, 60%, 36%) 0%, hsl(165, 55%, 42%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(16, 85%, 60%) 0%, hsl(32, 90%, 55%) 100%);
+    --gradient-hero: linear-gradient(160deg, hsl(152, 60%, 36%) 0%, hsl(180, 50%, 35%) 50%, hsl(200, 60%, 40%) 100%);
+    --gradient-dark-hero: linear-gradient(160deg, hsl(160, 40%, 15%) 0%, hsl(180, 35%, 12%) 50%, hsl(200, 40%, 18%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(150, 15%, 98%) 100%);
+
+
+    --shadow-sm: 0 1px 2px 0 hsl(160 30% 10% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(160 30% 10% / 0.08), 0 2px 4px -2px hsl(160 30% 10% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(160 30% 10% / 0.1), 0 4px 6px -4px hsl(160 30% 10% / 0.05);
+    --shadow-glow: 0 0 40px hsl(152 60% 36% / 0.15);
+
+    --sidebar-background: 150 20% 98%;
+    --sidebar-foreground: 160 25% 25%;
+    --sidebar-primary: 152 60% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 145 30% 92%;
+    --sidebar-accent-foreground: 160 30% 20%;
+    --sidebar-border: 150 20% 92%;
+    --sidebar-ring: 152 60% 36%;
+  }
+
+  .dark {
+    --background: 160 25% 8%;
+    --foreground: 150 15% 95%;
+
+    --card: 160 20% 12%;
+    --card-foreground: 150 15% 95%;
+
+    --popover: 160 20% 10%;
+    --popover-foreground: 150 15% 95%;
+
+    --primary: 152 55% 48%;
+    --primary-foreground: 160 30% 5%;
+
+    --secondary: 160 15% 18%;
+    --secondary-foreground: 150 15% 90%;
+
+    --muted: 160 15% 16%;
+    --muted-foreground: 150 10% 60%;
+
+    --accent: 16 75% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 160 15% 20%;
+    --input: 160 15% 20%;
+    --ring: 152 55% 48%;
+
+    --success: 152 50% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 85% 55%;
+    --warning-foreground: 0 0% 10%;
+    --info: 200 75% 55%;
+    --info-foreground: 0 0% 100%;
+
+    --gradient-card: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(160, 18%, 10%) 100%);
+
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.4), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.5), 0 4px 6px -4px hsl(0 0% 0% / 0.4);
+    --shadow-glow: 0 0 40px hsl(152 55% 48% / 0.2);
+
+    --sidebar-background: 160 20% 10%;
+    --sidebar-foreground: 150 15% 90%;
+    --sidebar-primary: 152 55% 48%;
+    --sidebar-primary-foreground: 160 30% 5%;
+    --sidebar-accent: 160 15% 16%;
+    --sidebar-accent-foreground: 150 15% 90%;
+    --sidebar-border: 160 15% 18%;
+    --sidebar-ring: 152 55% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .dark .gradient-hero {
+    background: var(--gradient-dark-hero);
+  }
+
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(152, 60%, 36%) 0%, hsl(165, 55%, 42%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out forwards;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted/50 rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full transition-colors;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
+}
