@@ -271,4 +271,258 @@ const getNgoUtilizationReport = async (req, res, next) => {
     }
 };
 
-export { getDonationReport, getNgoUtilizationReport };
+/**
+ * @desc    Generate a high-fidelity logistics report for volunteer performance
+ * @route   GET /api/v1/reports/volunteer-performance
+ * @access  Private (Admin only)
+ * @description Aggregates volunteer mission metrics, logistics efficiency, and tier correlation.
+ */
+const getVolunteerPerformanceReport = async (req, res, next) => {
+    try {
+        const { volunteerId, period } = req.query;
+
+        // Calculate period start date
+        let periodStartDate = new Date(0); // Default to all time
+        const now = new Date();
+        if (period === 'last_7_days') {
+            periodStartDate = new Date(now.setDate(now.getDate() - 7));
+        } else if (period === 'last_30_days') {
+            periodStartDate = new Date(now.setDate(now.getDate() - 30));
+        }
+
+        let userMatch = { role: 'volunteer' };
+        if (volunteerId) {
+            userMatch._id = new mongoose.Types.ObjectId(volunteerId);
+        }
+
+        const report = await User.aggregate([
+            { $match: userMatch },
+            {
+                $lookup: {
+                    from: 'donations',
+                    localField: '_id',
+                    foreignField: 'volunteer',
+                    as: 'missions',
+                },
+            },
+            {
+                $addFields: {
+                    filteredMissions: {
+                        $filter: {
+                            input: '$missions',
+                            as: 'mission',
+                            cond: { $gte: ['$$mission.createdAt', periodStartDate] },
+                        },
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    stats: {
+                        totalMissions: { $size: '$filteredMissions' },
+                        completed: {
+                            $size: {
+                                $filter: {
+                                    input: '$filteredMissions',
+                                    as: 'm',
+                                    cond: { $eq: ['$$m.status', 'completed'] },
+                                },
+                            },
+                        },
+                        failed: {
+                            $size: {
+                                $filter: {
+                                    input: '$filteredMissions',
+                                    as: 'm',
+                                    cond: { $in: ['$$m.status', ['cancelled', 'rejected']] },
+                                },
+                            },
+                        },
+                        avgDeliveryTimeMs: {
+                            $avg: {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: '$filteredMissions',
+                                            as: 'm',
+                                            cond: {
+                                                $and: [
+                                                    { $eq: ['$$m.status', 'completed'] },
+                                                    { $ne: [{ $ifNull: ['$$m.pickedUpAt', null] }, null] },
+                                                    { $ne: [{ $ifNull: ['$$m.deliveredAt', null] }, null] },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                    as: 'm',
+                                    in: { $dateDiff: { startDate: '$$m.pickedUpAt', endDate: '$$m.deliveredAt', unit: 'millisecond' } },
+                                },
+                            },
+                        },
+                        proofCompliantMissions: {
+                            $size: {
+                                $filter: {
+                                    input: '$filteredMissions',
+                                    as: 'm',
+                                    cond: {
+                                        $and: [
+                                            { $eq: ['$$m.status', 'completed'] },
+                                            { $ne: [{ $ifNull: ['$$m.pickupPhoto', null] }, null] },
+                                            { $ne: [{ $ifNull: ['$$m.deliveryPhoto', null] }, null] },
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    currentMission: {
+                        $filter: {
+                            input: '$missions',
+                            as: 'm',
+                            cond: { $in: ['$$m.status', ['assigned', 'picked_up']] },
+                        },
+                    },
+                    historyData: {
+                        $map: {
+                            input: {
+                                $setUnion: {
+                                    $map: {
+                                        input: '$filteredMissions',
+                                        as: 'm',
+                                        in: { $dateToString: { format: '%Y-%m-%d', date: '$$m.createdAt' } }
+                                    }
+                                }
+                            },
+                            as: 'date',
+                            in: {
+                                date: '$$date',
+                                missions: {
+                                    $size: {
+                                        $filter: {
+                                            input: '$filteredMissions',
+                                            as: 'm',
+                                            cond: { $eq: [{ $dateToString: { format: '%Y-%m-%d', date: '$$m.createdAt' } }, '$$date'] }
+                                        }
+                                    }
+                                },
+                                timeSpentMs: {
+                                    $sum: {
+                                        $map: {
+                                            input: {
+                                                $filter: {
+                                                    input: '$filteredMissions',
+                                                    as: 'm',
+                                                    cond: {
+                                                        $and: [
+                                                            { $eq: [{ $dateToString: { format: '%Y-%m-%d', date: '$$m.createdAt' } }, '$$date'] },
+                                                            { $ne: [{ $ifNull: ['$$m.pickedUpAt', null] }, null] },
+                                                            { $ne: [{ $ifNull: ['$$m.deliveredAt', null] }, null] }
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            as: 'm',
+                                            in: { $dateDiff: { startDate: '$$m.pickedUpAt', endDate: '$$m.deliveredAt', unit: 'millisecond' } }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    volunteerId: '$_id',
+                    name: 1,
+                    stats: {
+                        totalMissions: '$stats.totalMissions',
+                        completed: '$stats.completed',
+                        avgDeliveryTime: {
+                            $concat: [
+                                { $toString: { $ifNull: [{ $round: [{ $divide: ['$stats.avgDeliveryTimeMs', 60000] }, 0] }, 0] } },
+                                ' mins',
+                            ],
+                        },
+                        proofCompliance: {
+                            $concat: [
+                                {
+                                    $toString: {
+                                        $cond: [
+                                            { $gt: ['$stats.completed', 0] },
+                                            { $round: [{ $multiply: [{ $divide: ['$stats.proofCompliantMissions', '$stats.completed'] }, 100] }, 1] },
+                                            0
+                                        ]
+                                    }
+                                },
+                                '%',
+                            ],
+                        },
+                        successRate: {
+                            $cond: [
+                                { $gt: ['$stats.totalMissions', 0] },
+                                { $round: [{ $multiply: [{ $divide: ['$stats.completed', '$stats.totalMissions'] }, 100] }, 1] },
+                                0
+                            ]
+                        }
+                    },
+                    profile: {
+                        tier: {
+                            $switch: {
+                                branches: [
+                                    { case: { $eq: ['$volunteerProfile.tier', 'champion'] }, then: 'Champion' },
+                                    { case: { $eq: ['$volunteerProfile.tier', 'hero'] }, then: 'Hero' },
+                                ],
+                                default: 'Rookie'
+                            }
+                        },
+                        vehicle: {
+                            $switch: {
+                                branches: [
+                                    { case: { $eq: ['$volunteerProfile.vehicleType', 'bicycle'] }, then: 'Bicycle' },
+                                    { case: { $eq: ['$volunteerProfile.vehicleType', 'scooter'] }, then: 'Scooter' },
+                                    { case: { $eq: ['$volunteerProfile.vehicleType', 'car'] }, then: 'Car' },
+                                    { case: { $eq: ['$volunteerProfile.vehicleType', 'van'] }, then: 'Van' },
+                                ],
+                                default: 'N/A'
+                            }
+                        },
+                        isOnline: { $ifNull: ['$isOnline', false] },
+                        status: {
+                            $cond: [{ $gt: [{ $size: '$currentMission' }, 0] }, 'On Route', 'Available']
+                        }
+                    },
+                    history: {
+                        $slice: [
+                            {
+                                $map: {
+                                    input: '$historyData',
+                                    as: 'h',
+                                    in: {
+                                        date: '$$h.date',
+                                        missions: '$$h.missions',
+                                        timeSpent: {
+                                            $concat: [
+                                                { $toString: { $round: [{ $divide: ['$$h.timeSpentMs', 60000] }, 0] } },
+                                                'm'
+                                            ]
+                                        }
+                                    }
+                                }
+                            },
+                            -7 // Last 7 days of activity
+                        ]
+                    }
+                },
+            },
+            { $sort: { 'history.date': -1 } }
+        ]);
+
+        res.status(200).json(report);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export { getDonationReport, getNgoUtilizationReport, getVolunteerPerformanceReport };
