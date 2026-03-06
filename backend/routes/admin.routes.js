@@ -9,6 +9,8 @@ import {
     interveneTask,
     toggleEmergencyMode,
     getSystemConfig,
+    getHealthReport,
+    triggerManualHealthCheck,
 } from '../controllers/admin.controller.js';
 import { protect, roleBasedAccess } from '../middleware/auth.middleware.js';
 
@@ -25,5 +27,7 @@ adminRouter.get('/audit-logs', getAuditLogs);
 adminRouter.post('/intervene-task', interveneTask);
 adminRouter.post('/emergency-mode', toggleEmergencyMode);
 adminRouter.get('/system-config', getSystemConfig);
+adminRouter.get('/health', getHealthReport);
+adminRouter.post('/health-check', triggerManualHealthCheck);
 
 export default adminRouter;

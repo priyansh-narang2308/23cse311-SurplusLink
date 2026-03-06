@@ -5,6 +5,7 @@ import User from '../models/User.model.js';
 import { findSuitableVolunteers } from '../services/matching.service.js';
 import { reassignMission } from '../controllers/donation.controller.js';
 import { createNotification } from './notification.js';
+import { checkSystemAnomalies } from './healthMonitor.js';
 
 /**
  * @desc    Initialize Background Service Supervisor
@@ -23,6 +24,20 @@ const setupCronJobs = () => {
             }).on('error', (e) => {
                 console.error(`[Heartbeat] Ping failed: ${e.message}`);
             });
+        }
+    });
+
+    /**
+     * System Health & Anomaly Watchdog
+     * Frequency: Every 10 minutes
+     * Logic: Monitoring CPU and DB health, alerting admins on failures.
+     */
+    cron.schedule('*/10 * * * *', async () => {
+        console.log('[Cron] System Health Check: Searching for anomalies...');
+        try {
+            await checkSystemAnomalies();
+        } catch (error) {
+            console.error('[Health Cron] Monitoring failed:', error);
         }
     });
 

@@ -6,6 +6,38 @@ import AuditLog from '../models/AuditLog.model.js';
 import Donation from '../models/Donation.model.js';
 import SystemConfig from '../models/SystemConfig.model.js';
 import { createNotification } from '../utils/notification.js';
+import { getSystemHealth, checkSystemAnomalies } from '../utils/healthMonitor.js';
+
+/**
+ * @desc    Get Detailed System Health Report
+ * @route   GET /api/v1/admin/health
+ * @access  Private/Admin
+ */
+export const getHealthReport = async (req, res, next) => {
+    try {
+        const health = await getSystemHealth();
+        res.json(health);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Manually Trigger Health Anomaly Check
+ * @route   POST /api/v1/admin/health-check
+ * @access  Private/Admin
+ */
+export const triggerManualHealthCheck = async (req, res, next) => {
+    try {
+        const results = await checkSystemAnomalies();
+        res.json({
+            message: 'Manual health check completed',
+            results
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 
 /**
  * @desc    Toggle Emergency Mode
