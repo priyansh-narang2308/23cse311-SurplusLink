@@ -167,8 +167,7 @@ const donationSchema = new mongoose.Schema(
     }
 );
 
-// offline sync index
-donationSchema.index({ syncKey: 1 });
+// Index for GeoJSON queries
 
 donationSchema.virtual('coordinatesObj').get(function () {
     if (this.coordinates && this.coordinates.coordinates) {
