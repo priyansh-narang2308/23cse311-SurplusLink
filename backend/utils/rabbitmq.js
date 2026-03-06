@@ -15,7 +15,6 @@ export const connectRabbitMQ = async () => {
     return { connection, channel };
   } catch (error) {
     console.error('❌ RabbitMQ Connection Error:', error);
-    // In US 9.1, we want graceful degradation, so we don't crash the server
     return null;
   }
 };
