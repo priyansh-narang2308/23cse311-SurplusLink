@@ -14,6 +14,7 @@ import donationRoutes from './routes/donation.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import syncRoutes from './routes/sync.routes.js';
 
 
 dotenv.config({ path: './.env' });
@@ -79,6 +80,7 @@ app.use('/api/v1/donations', donationRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/sync', syncRoutes);
 
 
 // Error Handling

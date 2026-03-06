@@ -144,6 +144,14 @@ const donationSchema = new mongoose.Schema(
         estimatedArrivalAt: {
             type: Date,
         },
+        syncKey: {
+            type: String,
+            unique: true,
+            sparse: true, // Only for records created/updated offline
+        },
+        clientUpdatedAt: {
+            type: Date,
+        },
         statusHistory: [
             {
                 status: String,
@@ -158,6 +166,9 @@ const donationSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+// offline sync index
+donationSchema.index({ syncKey: 1 });
 
 donationSchema.virtual('coordinatesObj').get(function () {
     if (this.coordinates && this.coordinates.coordinates) {
