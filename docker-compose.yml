@@ -12,7 +12,10 @@ services:
       - ../Backend:/app
       - /app/node_modules
     command: npm run dev
-    restart: unless-stopped
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq
     networks:
       - surpluslink-network
 
@@ -28,6 +31,19 @@ services:
     restart: unless-stopped
     networks:
       - surpluslink-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: surpluslink-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - surpluslink-network
+    restart: unless-stopped
 
 networks:
   surpluslink-network:

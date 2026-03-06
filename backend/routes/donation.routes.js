@@ -29,7 +29,7 @@ import {
 import { protect, roleBasedAccess } from '../middleware/auth.middleware.js';
 import upload from '../config/cloudinary.js';
 
-import { deliveryStatusLimiter } from '../middleware/rateLimiter.js';
+import { deliveryStatusLimiter, donationLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -59,7 +59,7 @@ router.patch('/:id/cancel-mission', roleBasedAccess(['volunteer']), cancelMissio
 router.get('/:id/optimized-route', roleBasedAccess(['volunteer']), getOptimizedRoute);
 
 //donor sp ecific routes
-router.post('/', roleBasedAccess(['donor']), upload.array('photos', 5), createDonation);
+router.post('/', roleBasedAccess(['donor']), donationLimiter, upload.array('photos', 5), createDonation);
 router.get('/my-donations', roleBasedAccess(['donor']), getDonorHistory);
 router.get('/stats', roleBasedAccess(['donor']), getDonorStats);
 router.patch('/:id/cancel', roleBasedAccess(['donor']), cancelDonation);
