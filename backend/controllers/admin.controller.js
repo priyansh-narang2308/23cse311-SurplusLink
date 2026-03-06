@@ -4,7 +4,96 @@ import VerificationLog from '../models/VerificationLog.model.js';
 import ViolationLog from '../models/ViolationLog.model.js';
 import AuditLog from '../models/AuditLog.model.js';
 import Donation from '../models/Donation.model.js';
+import SystemConfig from '../models/SystemConfig.model.js';
 import { createNotification } from '../utils/notification.js';
+
+/**
+ * @desc    Toggle Emergency Mode
+ * @route   POST /api/v1/admin/emergency-mode
+ * @access  Private/Admin
+ */
+export const toggleEmergencyMode = async (req, res, next) => {
+    try {
+        const { enabled, reason, affectedZones, priorityRadius } = req.body;
+
+        let config = await SystemConfig.findOne();
+        if (!config) {
+            config = new SystemConfig();
+        }
+
+        const wasEnabled = config.emergencyMode.enabled;
+
+        config.emergencyMode = {
+            enabled,
+            activatedAt: enabled ? new Date() : config.emergencyMode.activatedAt,
+            activatedBy: enabled ? req.user._id : config.emergencyMode.activatedBy,
+            reason: reason || config.emergencyMode.reason,
+            affectedZones: affectedZones || config.emergencyMode.affectedZones,
+            priorityRadius: priorityRadius || config.emergencyMode.priorityRadius,
+        };
+
+        // If newly enabled, create a global broadcast alert
+        if (enabled && !wasEnabled) {
+            config.broadcastMessage = {
+                text: `🚨 EMERGENCY MODE ACTIVATED: ${reason || 'Prioritizing crisis zones.'}`,
+                active: true,
+                updatedAt: new Date()
+            };
+
+            // Notify all active NGOs and Volunteers (Broadcast)
+            const stakeholders = await User.find({
+                role: { $in: ['ngo', 'volunteer'] },
+                status: 'active'
+            }).select('_id');
+
+            for (const person of stakeholders) {
+                await createNotification(
+                    person._id,
+                    'emergency_mode_alert',
+                    'general',
+                    null,
+                    { reason: reason || 'Urgent logistics prioritization in effect.' }
+                );
+            }
+        } else if (!enabled && wasEnabled) {
+            config.broadcastMessage.active = false;
+        }
+
+        await config.save();
+
+        // Audit Log
+        await AuditLog.create({
+            action: `EMERGENCY_MODE_${enabled ? 'ENABLED' : 'DISABLED'}`,
+            category: 'system',
+            userId: req.user._id,
+            metadata: { reason, affectedZones },
+        });
+
+        res.json({
+            message: `Emergency mode ${enabled ? 'activated' : 'deactivated'} successfully.`,
+            config: config.emergencyMode
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Get Current System Config
+ * @route   GET /api/v1/admin/system-config
+ * @access  Private/Admin
+ */
+export const getSystemConfig = async (req, res, next) => {
+    try {
+        let config = await SystemConfig.findOne();
+        if (!config) {
+            config = await SystemConfig.create({});
+        }
+        res.json(config);
+    } catch (error) {
+        next(error);
+    }
+};
 
 /**
  * @desc    Get all pending users for verification

@@ -7,6 +7,8 @@ import {
     logViolation,
     getAuditLogs,
     interveneTask,
+    toggleEmergencyMode,
+    getSystemConfig,
 } from '../controllers/admin.controller.js';
 import { protect, roleBasedAccess } from '../middleware/auth.middleware.js';
 
@@ -21,5 +23,7 @@ adminRouter.get('/safety-rules', getSafetyRules);
 adminRouter.post('/log-violation', logViolation);
 adminRouter.get('/audit-logs', getAuditLogs);
 adminRouter.post('/intervene-task', interveneTask);
+adminRouter.post('/emergency-mode', toggleEmergencyMode);
+adminRouter.get('/system-config', getSystemConfig);
 
 export default adminRouter;

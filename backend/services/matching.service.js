@@ -7,6 +7,7 @@
 
 import Donation from '../models/Donation.model.js';
 import User from '../models/User.model.js';
+import SystemConfig from '../models/SystemConfig.model.js';
 import mongoose from 'mongoose';
 
 /**
@@ -29,6 +30,14 @@ export const getUrgencyInfo = (expiryDate) => {
 };
 
 /**
+ * Helper to check if a location is within a crisis zone
+ */
+const isInCrisisZone = (coordinates, emergencyMode) => {
+    if (!emergencyMode.enabled || !emergencyMode.affectedZones || emergencyMode.affectedZones.length === 0) return false;
+    return true; // Simplified for US 9.2 (Global prioritisation when enabled)
+};
+
+/**
  * Calculate the suitability score for an NGO based on a donation
  * Combines Distance (40%) and Time Urgency (60%)
  * Formula: Ranking = (DistanceScore * 0.4) + (TimeUrgencyScore * 0.6)
@@ -38,11 +47,16 @@ export const getUrgencyInfo = (expiryDate) => {
  * @param {Object} ngo - The NGO user object
  * @param {number} distance - Distance in meters
  * @param {number} unmetNeed - Unmet need for the NGO (still used for base capacity check)
+ * @param {Object} systemConfig - Optional System Config for Emergency Mode overrides
  * @returns {number} Suitability score (0-100)
  */
-export const calculateSuitabilityScore = (donation, ngo, distance, unmetNeed) => {
+export const calculateSuitabilityScore = (donation, ngo, distance, unmetNeed, systemConfig = null) => {
     const urgency = getUrgencyInfo(donation.expiryDate);
     const isCritical = urgency.tier === 1;
+
+    // US 9.2: Emergency Mode Overrides
+    const isEmergency = systemConfig?.emergencyMode?.enabled;
+    const isInZone = isEmergency && isInCrisisZone(donation.coordinates, systemConfig.emergencyMode);
 
     // 1. Distance score (40% weight)
     const distanceKm = distance / 1000;
@@ -56,23 +70,28 @@ export const calculateSuitabilityScore = (donation, ngo, distance, unmetNeed) =>
     // 3. Combine scores
     let finalScore = (distanceScore * distanceWeight) + (urgencyScore * urgencyWeight);
 
-    // Boost by 20% if NGO has isUrgentNeed flag
-    if (ngo.ngoProfile && ngo.ngoProfile.isUrgentNeed) {
-        finalScore = finalScore * 1.2;
-    }
+    // US 9.2: Crisis Zone Boost (Ignore capacity, priority multiplier)
+    if (isInZone) {
+        finalScore = finalScore * 2.5; // Massive boost for crisis zones
+    } else {
+        // Boost by 20% if NGO has isUrgentNeed flag
+        if (ngo.ngoProfile && ngo.ngoProfile.isUrgentNeed) {
+            finalScore = finalScore * 1.2;
+        }
 
-    // INTELLIGENT LOAD BALANCING (Density Check)
-    // Requirement 5.6: If at >80% capacity, apply 0.5x multiplier for non-critical donations
-    if (!isCritical && ngo.ngoProfile?.dailyCapacity > 0) {
-        const claimedCount = ngo.ngoProfile.dailyCapacity - unmetNeed;
-        const capacityUsage = claimedCount / ngo.ngoProfile.dailyCapacity;
+        // INTELLIGENT LOAD BALANCING (Density Check)
+        // Requirement 5.6: If at >80% capacity, apply 0.5x multiplier for non-critical donations
+        if (!isCritical && ngo.ngoProfile?.dailyCapacity > 0) {
+            const claimedCount = ngo.ngoProfile.dailyCapacity - unmetNeed;
+            const capacityUsage = claimedCount / ngo.ngoProfile.dailyCapacity;
 
-        if (capacityUsage > 0.8) {
-            finalScore = finalScore * 0.5;
+            if (capacityUsage > 0.8) {
+                finalScore = finalScore * 0.5;
+            }
         }
     }
 
-    return Math.round(Math.min(finalScore, 100) * 100) / 100;
+    return Math.round(Math.min(finalScore, 500) * 100) / 100;
 };
 
 /**
@@ -89,6 +108,9 @@ export const findBestNGOsForDonation = async (donationId) => {
             throw new Error('Donation not found');
         }
 
+        const systemConfig = await SystemConfig.findOne();
+        const isEmergency = systemConfig?.emergencyMode?.enabled;
+
         const [lng, lat] = donation.coordinates.coordinates;
 
         // Use MongoDB aggregation pipeline for efficient geospatial calculations
@@ -100,7 +122,7 @@ export const findBestNGOsForDonation = async (donationId) => {
                         coordinates: [lng, lat],
                     },
                     distanceField: 'distance',
-                    maxDistance: 100000, // 100km in meters (was 15km)
+                    maxDistance: isEmergency ? 500000 : 100000, // 500km during emergency vs 100km
                     spherical: true,
                     key: 'location', // Explicitly use the NGO location index
                     query: {
@@ -155,7 +177,7 @@ export const findBestNGOsForDonation = async (donationId) => {
         // Calculate suitability scores for each NGO
         const scoredNGOs = await Promise.all(ngos.map(async (ngo) => {
             const unmetNeed = await getUnmetNeed(ngo._id);
-            const suitabilityScore = calculateSuitabilityScore(donation, ngo, ngo.distance, unmetNeed);
+            const suitabilityScore = calculateSuitabilityScore(donation, ngo, ngo.distance, unmetNeed, systemConfig);
             const urgency = getUrgencyInfo(donation.expiryDate);
 
             return {
@@ -285,10 +307,11 @@ export const findBestDonationsForNGO = async (ngoId) => {
 
         const donations = await Donation.aggregate(pipeline);
         const unmetNeed = await getUnmetNeed(ngoId);
+        const systemConfig = await SystemConfig.findOne();
 
         // Calculate suitability scores for each donation
         const scoredDonations = donations.map((donation) => {
-            const suitabilityScore = calculateSuitabilityScore(donation, ngo, donation.distance, unmetNeed);
+            const suitabilityScore = calculateSuitabilityScore(donation, ngo, donation.distance, unmetNeed, systemConfig);
             const urgency = getUrgencyInfo(donation.expiryDate);
 
             return {
