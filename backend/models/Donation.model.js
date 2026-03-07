@@ -161,6 +161,11 @@ const donationSchema = new mongoose.Schema(
                 note: String,
             },
         ],
+        azureAiDetection: {
+            foodName: String,
+            tags: [String],
+            confidence: Number,
+        },
     },
     {
         timestamps: true,

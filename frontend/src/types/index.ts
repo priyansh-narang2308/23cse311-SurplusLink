@@ -122,6 +122,11 @@ export interface Donation {
     };
     note?: string;
   }[];
+  azureAiDetection?: {
+    foodName: string;
+    tags: string[];
+    confidence: number;
+  };
 }
 
 export interface Notification {

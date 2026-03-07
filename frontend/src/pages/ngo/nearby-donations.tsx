@@ -395,6 +395,27 @@ export function NearbyDonationsPage() {
                             </div>
                         </div>
 
+                        {viewDonation?.azureAiDetection && (
+                            <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100/50 space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <Zap className="h-4 w-4 text-indigo-600 fill-indigo-600" />
+                                    <span className="text-sm font-bold text-indigo-900 tracking-tight">AI Food Analysis</span>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-sm text-indigo-800">
+                                        Detected: <span className="font-semibold">{viewDonation.azureAiDetection.foodName}</span>
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                        {viewDonation.azureAiDetection.tags.map((tag, idx) => (
+                                            <Badge key={idx} variant="secondary" className="bg-white/70 text-indigo-700 border-indigo-100 text-[10px] py-0 px-2">
+                                                #{tag}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="mt-8 flex justify-end gap-3 pt-6 border-t">
                             <Button variant="outline" onClick={() => setViewDonation(null)}>Close</Button>
                             {viewDonation && (viewDonation.status === 'active' || !viewDonation.status) && (

@@ -294,6 +294,7 @@ export const findBestDonationsForNGO = async (ngoId) => {
                     status: 1,
                     photos: 1,
                     distance: 1,
+                    azureAiDetection: 1,
                     donor: {
                         _id: '$donorInfo._id',
                         name: '$donorInfo.name',

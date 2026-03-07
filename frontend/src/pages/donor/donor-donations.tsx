@@ -13,7 +13,8 @@ import {
     Navigation,
     Loader2,
     Calendar,
-    History
+    History,
+    Zap
 } from 'lucide-react';
 import {
     Dialog,
@@ -248,6 +249,27 @@ export default function DonorDonations() {
                                 <div className="bg-blue-50 p-3 rounded-lg text-sm border border-blue-100">
                                     <p className="text-black font-medium mb-1">Claimed By</p>
                                     <p className="text-orange-500 font-bold">{selectedDonation.ngoName || "NGO"}</p>
+                                </div>
+                            )}
+
+                            {selectedDonation.azureAiDetection && (
+                                <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100/50 space-y-3 shadow-sm">
+                                    <div className="flex items-center gap-2">
+                                        <Zap className="h-4 w-4 text-indigo-600 fill-indigo-600" />
+                                        <span className="text-xs font-black uppercase tracking-widest text-indigo-900/70">AI Food Analysis</span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-bold text-indigo-950">
+                                            Result: <span className="text-indigo-700">{selectedDonation.azureAiDetection.foodName}</span>
+                                        </p>
+                                        <div className="flex flex-wrap gap-1.5 mt-2">
+                                            {selectedDonation.azureAiDetection.tags.map((tag, idx) => (
+                                                <Badge key={idx} variant="secondary" className="bg-white/80 text-indigo-600 border-indigo-100 font-bold text-[10px] py-0 px-2 shadow-sm uppercase tracking-tighter">
+                                                    #{tag}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 

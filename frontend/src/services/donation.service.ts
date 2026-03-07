@@ -55,6 +55,7 @@ interface BackendDonation {
     matchPercentage?: number;
     urgencyLevel?: Donation['urgencyLevel'];
     distance?: number;
+    azureAiDetection?: Donation['azureAiDetection'];
 }
 
 const mapDonation = (d: BackendDonation): Donation => ({
@@ -146,6 +147,7 @@ const mapDonation = (d: BackendDonation): Donation => ({
     urgencyLevel: d.urgencyLevel,
     distance: d.distance,
     donorTrustScore: d.donor?.stats?.trustScore,
+    azureAiDetection: d.azureAiDetection,
 });
 
 const DonationService = {

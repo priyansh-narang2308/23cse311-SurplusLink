@@ -22,6 +22,8 @@ import { findBestDonationsForNGO, getUnmetNeed, findSuitableVolunteers } from '.
 import { getOptimalPath } from '../services/routing.service.js';
 import ImpactMetric from '../models/ImpactMetric.model.js';
 import { convertToWeight, calculateMeals, calculateCo2Savings } from '../utils/impact.js';
+import { analyzeDonationImage } from '../services/azureVision.service.js';
+
 
 /**
  * @desc    Create a new donation posting
@@ -150,6 +152,19 @@ export const createDonation = async (req, res) => {
         }
 
         const donation = await Donation.create(donationData);
+
+        // --- Azure AI Vision Analysis ---
+        if (photos.length > 0) {
+            // We analyze the first photo for simplicity, or we could do more
+            try {
+                const aiResult = await analyzeDonationImage(photos[0]);
+                if (aiResult) {
+                    donation.azureAiDetection = aiResult;
+                }
+            } catch (aiError) {
+                console.error('Azure AI Analysis failed for donation:', donation._id, aiError);
+            }
+        }
 
         // Record initial status in timeline
         donation.addStatusHistory(req.user._id, 'Donation created and posted.');

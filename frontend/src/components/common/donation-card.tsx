@@ -154,6 +154,12 @@ export function DonationCard({
               <span className="capitalize">{donation.storageReq}</span>
             </Badge>
           )}
+          {donation.azureAiDetection && (
+            <Badge className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 flex items-center gap-1">
+              <Zap className="h-3 w-3 fill-indigo-700" />
+              AI: {donation.azureAiDetection.foodName}
+            </Badge>
+          )}
         </div>
 
         {(donation.pickupPhoto || donation.deliveryPhoto) && (
