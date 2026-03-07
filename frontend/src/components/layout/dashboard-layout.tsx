@@ -9,6 +9,9 @@ import { Sun, Moon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/theme-context';
 import { LanguageSelector } from '@/components/common/language-selector';
+import { useOfflineSync } from '@/hooks/use-offline-sync';
+import { WifiOff, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface DashboardLayoutProps {
     requiredRole?: UserRole;
@@ -17,6 +20,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ requiredRole }: DashboardLayoutProps) {
     const { isAuthenticated, role, isLoading } = useAuth();
     const { theme, toggleTheme } = useTheme();
+    const { isOnline, isSyncing } = useOfflineSync();
 
     if (isLoading) {
         return (
@@ -48,6 +52,18 @@ export function DashboardLayout({ requiredRole }: DashboardLayoutProps) {
 
                         </div>
                         <div className="flex items-center gap-4">
+                            {!isOnline && (
+                                <Badge variant="destructive" className="gap-1.5 animate-pulse uppercase text-[9px] font-black">
+                                    <WifiOff size={12} />
+                                    Offline
+                                </Badge>
+                            )}
+                            {isSyncing && (
+                                <div className="flex items-center gap-2 text-primary font-black text-[9px] uppercase animate-bounce">
+                                    <RefreshCw size={14} className="animate-spin" />
+                                    Syncing
+                                </div>
+                            )}
                             <LanguageSelector />
                             <Button
                                 variant="ghost"

@@ -258,3 +258,24 @@ export interface VolunteerPerformanceReport {
     volunteerName: string;
   }[];
 }
+export interface SystemConfig {
+  emergencyMode: {
+    enabled: boolean;
+    reason?: string;
+    priorityRadius: number;
+  };
+}
+
+export interface SystemHealth {
+  status: 'Healthy' | 'Degraded' | 'Critical';
+  timestamp: string;
+  uptime: number;
+  system: {
+    cpuUsage: string;
+    freeMem: string;
+    totalMem: string;
+  };
+  database: {
+    status: string;
+  };
+}

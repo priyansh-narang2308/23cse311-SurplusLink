@@ -10,9 +10,13 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
 import DonationService from '@/services/donation.service';
-import { User } from '@/types';
+import { User, SystemConfig, SystemHealth } from '@/types';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { toast } from '@/hooks/use-toast';
+import { ShieldAlert, Activity } from 'lucide-react';
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState({
@@ -26,16 +30,21 @@ export default function AdminDashboard() {
         totalCo2: 0,
         monthlyData: [] as { month: string; donations: number }[]
     });
+    const [config, setConfig] = useState<SystemConfig | null>(null);
+    const [health, setHealth] = useState<SystemHealth | null>(null);
     const [recentUsers, setRecentUsers] = useState<User[]>([]);
+    const [toggling, setToggling] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                const [userRes, adminRes, impactRes] = await Promise.all([
+                const [userRes, adminRes, impactRes, configRes, healthRes] = await Promise.all([
                     api.get('/users/admin/users'),
                     DonationService.getAdminStats(),
-                    api.get('/reports/impact-summary')
+                    api.get('/reports/impact-summary'),
+                    api.get('/admin/system-config'),
+                    api.get('/admin/health')
                 ]);
 
                 const users = userRes.data;
@@ -55,26 +64,60 @@ export default function AdminDashboard() {
                     monthlyData: adminRes.monthlyData
                 });
                 setRecentUsers(users.slice(0, 5));
+                setConfig(configRes.data);
+                setHealth(healthRes.data);
             } catch (error) {
                 console.error('Dashboard fetch error:', error);
             }
         };
 
         fetchDashboardData();
-        const interval = setInterval(fetchDashboardData, 10000);
+        const interval = setInterval(fetchDashboardData, 15000);
         return () => clearInterval(interval);
     }, []);
 
+    const toggleEmergency = async (enabled: boolean) => {
+        setToggling(true);
+        try {
+            const res = await api.post('/admin/emergency-mode', {
+                enabled,
+                reason: 'Admin Override'
+            });
+            setConfig(prev => prev ? { ...prev, emergencyMode: res.data.config } : null);
+            toast({ title: enabled ? 'EMERGENCY ACTIVE' : 'Emergency Resolved' });
+        } catch (error) {
+            toast({ title: 'Update Failed', variant: 'destructive' });
+        } finally {
+            setToggling(false);
+        }
+    };
+
     return (
         <div className="space-y-8">
-            <PageHeader title="Admin Dashboard" description="System overview and real-time monitoring." />
+            <PageHeader title="Admin Dashboard" description="System overview.">
+                <div className="flex items-center gap-4 bg-muted/50 p-2 rounded-xl px-4">
+                    <Label className="text-[10px] font-black uppercase">Emergency</Label>
+                    <Switch checked={config?.emergencyMode.enabled} onCheckedChange={toggleEmergency} disabled={toggling} />
+                </div>
+            </PageHeader>
+
+            {config?.emergencyMode.enabled && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-4 animate-pulse">
+                    <ShieldAlert className="text-red-500" />
+                    <p className="text-sm font-black text-red-900 uppercase">Emergency Protocol Engaged - Priority Logistics Active</p>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                <StatCard
+                    title="Health"
+                    value={health?.status || 'Online'}
+                    icon={<Activity className={health?.status === 'Healthy' ? "text-green-500" : "text-red-500"} />}
+                />
                 <StatCard title="Donations Today" value={stats.donationsToday} icon={<FileText className="h-5 w-5" />} trend={{ value: stats.donationsToday > 0 ? 100 : 0, isPositive: true }} />
                 <StatCard title="Total Meals" value={stats.totalMeals.toLocaleString()} icon={<Sparkles className="h-5 w-5" />} />
                 <StatCard title="CO₂ Avoided" value={`${stats.totalCo2.toFixed(1)}kg`} icon={<Leaf className="h-5 w-5" />} />
                 <StatCard title="Active Routes" value={stats.activeRoutes} icon={<Truck className="h-5 w-5" />} />
-                <StatCard title="Total Users" value={stats.totalUsers} icon={<Users className="h-5 w-5" />} />
                 <StatCard
                     title="Pending Approvals"
                     value={stats.pendingApprovals}
