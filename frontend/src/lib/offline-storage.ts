@@ -8,7 +8,7 @@ const DB_VERSION = 1;
 interface QueuedAction {
     id?: number;
     type: string;
-    data: any;
+    data: unknown;
     endpoint: string;
     method: string;
     timestamp: string;
@@ -43,7 +43,7 @@ export const removeQueuedAction = async (id: number) => {
     return db.delete(STORE_NAME, id);
 };
 
-export const cacheData = async (endpoint: string, data: any) => {
+export const cacheData = async (endpoint: string, data: unknown) => {
     const db = await initDB();
     return db.put(CACHE_STORE, { endpoint, data, timestamp: new Date().toISOString() });
 };
