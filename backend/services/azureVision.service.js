@@ -14,7 +14,6 @@ export const analyzeDonationImage = async (imageUrl) => {
             return null;
         }
 
-        // Handle ESM/CJS interop mess
         const createClient = ImageAnalysisClient.default || ImageAnalysisClient;
         console.log('Analyzing image with Azure AI:', imageUrl);
         const client = createClient(endpoint, new AzureKeyCredential(key));
