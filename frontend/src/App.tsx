@@ -31,6 +31,7 @@ import DonationAnalytics from "./pages/admin/donation-analytics";
 import NgoDashboard from "./pages/ngo/ngo-dashboard";
 import VolunteerDashboard from "./pages/volunteer/volunteer-dashboard";
 import VolunteerPerformance from "./pages/admin/volunteer-performance";
+import FoodSafetyCompliance from "./pages/admin/food-safety-compliance";
 import VolunteerSettings from "./pages/volunteer/settings";
 import AvailableMissions from "./pages/volunteer/available-missions";
 import ActiveMission from "./pages/volunteer/active-mission";
@@ -98,6 +99,7 @@ const App = () => (
                     <Route path="tasks" element={<ActiveTasksPage />} />
                     <Route path="reports" element={<DonationAnalytics />} />
                     <Route path="volunteers" element={<VolunteerPerformance />} />
+                    <Route path="food-safety" element={<FoodSafetyCompliance />} />
                     <Route path="impact-report" element={<NgoImpactReport />} />
                     <Route path="tracking" element={<AdminDashboard />} />
                     <Route path="notifications" element={<AdminDashboard />} />

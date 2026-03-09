@@ -562,43 +562,79 @@ const getSafetyComplianceReport = async (req, res, next) => {
     try {
         const { startDate, endDate } = req.query;
 
+        // Build a date filter for time-scoped queries (logs, donations, etc.)
+        // BUG FIX: endDate arrives as 'yyyy-MM-dd' (e.g. "2026-03-09").
+        // new Date("2026-03-09") = 2026-03-09T00:00:00.000Z which cuts off today's records.
+        // We push it to end-of-day so the entire day is included.
         let dateFilter = {};
         if (startDate || endDate) {
             dateFilter.createdAt = {};
             if (startDate) dateFilter.createdAt.$gte = new Date(startDate);
-            if (endDate) dateFilter.createdAt.$lte = new Date(endDate);
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999); // include full end day
+                dateFilter.createdAt.$lte = end;
+            }
         }
 
         // 1. Safety Rejections (Rejections flagged as safety issues)
         const safetyRejections = await RejectionLog.find({
             ...dateFilter,
             isSafetyIssue: true
-        }).populate('donationId ngoId');
+        }).populate('donationId ngoId').lean();
 
         // 2. Expired/Unsafe Food (Donations that expired before being picked up)
         const unsafeDonations = await Donation.find({
             ...dateFilter,
             status: { $in: ['expired', 'rejected'] }
-        }).populate('donor');
+        }).populate('donor').lean();
 
         // 3. User Violations (Direct violations logged by admins)
-        const userViolations = await ViolationLog.find(dateFilter).populate('userId adminId');
+        const userViolations = await ViolationLog.find(dateFilter).populate('userId adminId').lean();
 
-        // 4. Verification Audits (History of user verification actions)
-        const verificationHistory = await VerificationLog.find(dateFilter).populate('userId adminId');
+        // 4. Verification Audits (History of user verification actions from VerificationLog)
+        const verificationHistory = await VerificationLog.find(dateFilter).populate('userId adminId').lean();
+
+        // 4b. Users currently awaiting KYC approval (User.status === 'pending').
+        // BUG FIX: Do NOT apply dateFilter here. A user who registered 3 months ago
+        // and is STILL 'pending' should always appear — they are pending RIGHT NOW.
+        // Applying dateFilter would hide users who registered before the selected window.
+        const pendingUsers = await User.find({ status: 'pending' })
+            .select('name organization email createdAt')
+            .lean();
+
+        // Synthesise virtual verification entries for users with no VerificationLog yet.
+        // Exclude users who already have a VerificationLog entry.
+        const usersWithLogs = new Set(verificationHistory.map(v => String(v.userId?._id || v.userId)));
+        const pendingUserEntries = pendingUsers
+            .filter(u => !usersWithLogs.has(String(u._id)))
+            .map(u => ({
+                _id: u._id,
+                userId: { _id: u._id, name: u.name, organization: u.organization, email: u.email },
+                adminId: null,
+                status: 'pending',
+                action: 'awaiting_kyc',
+                createdAt: u.createdAt,
+            }));
+
+        // Merge: real VerificationLog entries + synthesised pending-user entries
+        const mergedVerificationHistory = [...verificationHistory, ...pendingUserEntries];
 
         // 5. Admin Governance Actions (Filtered from generic AuditLog)
+        // BUG FIX: Include 'verification' category — verifyUser() logs with category:'verification'
+        // so without it KYC approval/rejection audit events were invisible in the Governance tab.
         const adminActions = await AuditLog.find({
             ...dateFilter,
-            category: { $in: ['safety', 'system'] }
-        }).populate('userId');
+            category: { $in: ['safety', 'system', 'verification'] }
+        }).populate('userId').lean();
 
         // 6. Summary Metrics
         const reportSummary = {
             totalSafetyRejections: safetyRejections.length,
             expiredEntries: unsafeDonations.filter(d => d.status === 'expired').length,
             violationsRecorded: userViolations.length,
-            pendingVerifications: verificationHistory.filter(v => v.status === 'pending').length,
+            // Count ALL currently-pending verifications (log entries + raw pending users)
+            pendingVerifications: mergedVerificationHistory.filter(v => v.status === 'pending').length,
             totalGovernanceActions: adminActions.length
         };
 
@@ -609,7 +645,7 @@ const getSafetyComplianceReport = async (req, res, next) => {
                 safetyRejections,
                 unsafeDonations,
                 userViolations,
-                verificationHistory,
+                verificationHistory: mergedVerificationHistory,
                 governanceActions: adminActions
             }
         });

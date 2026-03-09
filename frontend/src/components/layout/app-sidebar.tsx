@@ -96,6 +96,7 @@ const navItemsByRole = {
         { label: "Task Rescue", href: "/admin/tasks", icon: AlertTriangle },
         { label: "System Reports", href: "/admin/reports", icon: FileText },
         { label: "Volunteer Fleet", href: "/admin/volunteers", icon: Zap },
+        { label: "Food Safety Report", href: "/admin/food-safety", icon: ShieldAlert },
     ],
     volunteer: [
         { label: "Dashboard", href: "/volunteer", icon: Home },

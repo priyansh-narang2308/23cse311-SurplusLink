@@ -21,6 +21,14 @@ class ReportService {
         const response = await api.get('/reports/volunteer-performance');
         return response.data;
     }
+
+    async getSafetyCompliance(startDate?: string, endDate?: string) {
+        const params: Record<string, string> = {};
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+        const response = await api.get('/reports/safety-compliance', { params });
+        return response.data;
+    }
 }
 
 export default new ReportService();

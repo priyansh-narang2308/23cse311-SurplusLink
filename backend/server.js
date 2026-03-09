@@ -30,6 +30,8 @@ app.use(globalLimiter); // Apply US 9.1 Global Rate Limiting
 const allowedOrigins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
     "https://surpluslink.vercel.app",
     process.env.FRONTEND_URL,
 ].filter(Boolean);
