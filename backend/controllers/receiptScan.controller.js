@@ -1,177 +1,244 @@
 /**
- * @module Receipt Scanner
- * @description Uses Azure Computer Vision Read API to extract text from a donated
- * food receipt / confirmation document, then maps the extracted key-value pairs
- * to donation form fields so the UI can autofill the form.
+ * @module Receipt Scanner — Azure Document Intelligence ONLY
+ * @description Uses Azure Document Intelligence (prebuilt-layout model) to scan
+ * and extract text from food donation receipts. The DI-extracted lines are then
+ * parsed using a multi-line key-value parser to map fields to the donation form.
+ *
+ * This module does NOT use Azure Computer Vision.
+ *
+ * Required .env variables:
+ *   AZURE_DOCUMENT_INTELLIGENCE_KEY       — DI resource key
+ *   AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT  — e.g. https://my-di.cognitiveservices.azure.com
  */
 
 import axios from 'axios';
 import multer from 'multer';
 
-// Use in-memory storage — we only need the buffer to forward to Azure, NOT to save it.
+// In-memory storage — the receipt image is forwarded to Azure; never saved to disk
 const memStorage = multer.memoryStorage();
 export const receiptUpload = multer({
     storage: memStorage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
     fileFilter: (req, file, cb) => {
-        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'application/pdf'];
+        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'application/pdf', 'image/tiff'];
         if (allowed.includes(file.mimetype)) cb(null, true);
-        else cb(new Error('Only image or PDF files are accepted for receipt scanning'));
+        else cb(new Error('Only image (JPEG, PNG, WEBP, BMP, TIFF) or PDF files are accepted'));
     },
 });
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Step 1: Call Azure Document Intelligence ─────────────────────────────────
 
 /**
- * Call Azure Computer Vision Read API (v3.2) and poll until the read result is ready.
- * Returns an array of text lines extracted from the document.
+ * Submits the image to Azure Document Intelligence (prebuilt-layout) and polls
+ * until the analysis is complete. Returns the full analyzeResult object.
  */
-async function extractTextWithAzureOCR(imageBuffer, mimeType) {
-    const endpoint = process.env.AZURE_COMPUTER_VISION_ENDPOINT?.replace(/\/$/, '');
-    const key = process.env.AZURE_COMPUTER_VISION_KEY;
+async function analyzeWithDI(imageBuffer, mimeType) {
+    const endpoint = process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT?.replace(/\/$/, '');
+    const key = process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY;
 
     if (!endpoint || !key) {
-        throw new Error('Azure Computer Vision is not configured on the server.');
+        throw new Error(
+            'Azure Document Intelligence is not configured. ' +
+            'Please set AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT and AZURE_DOCUMENT_INTELLIGENCE_KEY in .env'
+        );
     }
 
-    const readUrl = `${endpoint}/vision/v3.2/read/analyze`;
+    // Use prebuilt-layout: confirmed working on this resource
+    const analyzeUrl =
+        `${endpoint}/documentintelligence/documentModels/prebuilt-layout:analyze?api-version=2024-11-30`;
 
-    // Submit the image to the Read API (async operation)
-    const submitRes = await axios.post(readUrl, imageBuffer, {
+    // Submit: POST the image buffer directly
+    const submitRes = await axios.post(analyzeUrl, imageBuffer, {
         headers: {
             'Ocp-Apim-Subscription-Key': key,
             'Content-Type': mimeType,
         },
-        params: { language: 'en' },
     });
 
     const operationUrl = submitRes.headers['operation-location'];
-    if (!operationUrl) throw new Error('Azure OCR did not return an operation URL.');
+    if (!operationUrl) throw new Error('Document Intelligence did not return an operation-location URL.');
 
-    // Poll until succeeded (up to 15s)
-    for (let attempt = 0; attempt < 15; attempt++) {
+    // Poll until succeeded (max 30 s)
+    for (let i = 0; i < 30; i++) {
         await new Promise(r => setTimeout(r, 1000));
-        const pollRes = await axios.get(operationUrl, {
+        const poll = await axios.get(operationUrl, {
             headers: { 'Ocp-Apim-Subscription-Key': key },
         });
 
-        if (pollRes.data.status === 'succeeded') {
-            const lines = [];
-            for (const page of pollRes.data.analyzeResult.readResults) {
-                for (const line of page.lines) {
-                    lines.push(line.text);
-                }
-            }
-            return lines;
-        }
-
-        if (pollRes.data.status === 'failed') {
-            throw new Error('Azure OCR read operation failed.');
+        if (poll.data.status === 'succeeded') return poll.data.analyzeResult;
+        if (poll.data.status === 'failed') {
+            throw new Error('DI analysis failed: ' + JSON.stringify(poll.data.error ?? {}));
         }
     }
 
-    throw new Error('Azure OCR timed out. Please try again with a clearer image.');
+    throw new Error('Document Intelligence timed out. Please try again.');
 }
 
-/**
- * Parse raw OCR lines into donation form fields.
- * The document from the photo has a "FIELD: value" structure.
- * We also handle free-text receipts via pattern matching.
- */
-function parseReceiptLines(lines) {
-    const result = {};
-    const fullText = lines.join('\n').toLowerCase();
+// ─── Step 2: Extract text lines from DI result ───────────────────────────────
 
-    // Build a key-value map from lines that contain ":"
-    const kvMap = {};
-    for (const line of lines) {
-        const colonIdx = line.indexOf(':');
-        if (colonIdx > 0 && colonIdx < line.length - 1) {
-            const rawKey = line.slice(0, colonIdx).trim().toLowerCase().replace(/\s+/g, '_');
-            const val = line.slice(colonIdx + 1).trim();
-            if (val) kvMap[rawKey] = val;
+/**
+ * Pulls all text lines from the DI analyzeResult pages.
+ * Also tries to use native keyValuePairs if the model detected them.
+ */
+function extractFromDIResult(analyzeResult) {
+    // Collect lines from DI pages (this is always available)
+    const lines = [];
+    for (const page of (analyzeResult.pages ?? [])) {
+        for (const line of (page.lines ?? [])) {
+            lines.push(line.content ?? line.text ?? '');
         }
     }
 
-    // ── Title ──────────────────────────────────────────────────────────────
-    const titleKey = findKey(kvMap, ['title', 'item', 'food_item', 'donation_title', 'name']);
-    if (titleKey) result.title = kvMap[titleKey];
-
-    // ── Description ────────────────────────────────────────────────────────
-    const descKey = findKey(kvMap, ['description', 'desc', 'details', 'notes', 'about']);
-    if (descKey) result.description = kvMap[descKey];
-
-    // ── Food Type ──────────────────────────────────────────────────────────
-    const foodTypeKey = findKey(kvMap, ['food_type', 'foodtype', 'type', 'food']);
-    if (foodTypeKey) {
-        result.foodType = normalizeFoodType(kvMap[foodTypeKey]);
+    // Try native key-value pairs first (returned by prebuilt-layout when detected)
+    const rawKVPairs = analyzeResult.keyValuePairs ?? [];
+    const nativeKV = {};
+    for (const pair of rawKVPairs) {
+        if (!pair.value?.content) continue;
+        const normKey = (pair.key?.content ?? '')
+            .toLowerCase()
+            .replace(/:$/, '')
+            .replace(/\s+/g, '_')
+            .trim();
+        if (normKey) nativeKV[normKey] = pair.value.content.trim();
     }
 
-    // ── Food Category ─────────────────────────────────────────────────────
-    const catKey = findKey(kvMap, ['category', 'food_category', 'cat']);
-    if (catKey) result.foodCategory = normalizeFoodCategory(kvMap[catKey]);
+    return { lines, nativeKV };
+}
 
-    // ── Storage Requirement ───────────────────────────────────────────────
-    const storKey = findKey(kvMap, ['storage', 'storage_req', 'storage_requirement', 'store']);
-    if (storKey) result.storageReq = normalizeStorage(kvMap[storKey]);
+// ─── Step 3: Parse multi-line text into key-value pairs ──────────────────────
 
-    // ── Quantity ──────────────────────────────────────────────────────────
-    const qtyKey = findKey(kvMap, ['quantity', 'qty', 'amount', 'portions', 'servings', 'units', 'weight']);
-    if (qtyKey) result.quantity = kvMap[qtyKey];
+/**
+ * Handles the common receipt format where key and value are on SEPARATE lines:
+ *
+ *   "TITLE:"                   ← key line (nothing after colon)
+ *   "Surplus Chicken Biryani"  ← value on the next line
+ *   "QUANTITY:"
+ *   "15 Portions"
+ *
+ * Returns a flat object { normalisedKey: value }.
+ */
+function parseMultiLineText(lines) {
+    const kvMap = {};
+    let i = 0;
 
-    // ── Perishability ─────────────────────────────────────────────────────
-    const perKey = findKey(kvMap, ['perishability', 'perishable', 'urgency', 'shelf_life']);
-    if (perKey) result.perishability = normalizePerishability(kvMap[perKey]);
+    // Build a map of all lines for easier lookahead
+    const trimmedLines = lines.map(l => l.trim()).filter(l => l.length > 0);
 
-    // ── Expiry Date ───────────────────────────────────────────────────────
-    const expiryVal = kvMap[findKey(kvMap, ['expiry_date', 'expiry', 'best_before', 'use_by', 'expires', 'expiration_date'])] || '';
-    if (expiryVal) {
-        const parsed = parseDateString(expiryVal);
-        if (parsed) result.expiryDate = parsed;
+    while (i < trimmedLines.length) {
+        const line = trimmedLines[i];
+        const colonIdx = line.indexOf(':');
+
+        if (colonIdx > 0) {
+            const rawKey = line.slice(0, colonIdx).trim().toLowerCase().replace(/\s+/g, '_');
+            let val = line.slice(colonIdx + 1).trim();
+
+            if (!val) {
+                // Value is on the next line(s) — collect until the next KEY: line
+                const parts = [];
+                let j = i + 1;
+                while (j < trimmedLines.length) {
+                    const next = trimmedLines[j];
+                    // Stop when we hit another "KEY:" pattern (at least 2 caps/chars + colon)
+                    if (/^[A-Z][A-Z\s]{2,}:/.test(next)) break;
+                    parts.push(next);
+                    j++;
+                    if (parts.length >= 3) break; // limit multi-line values to 3 lines
+                }
+                val = parts.join(' ');
+                // If we found a value, skip those lines in the next iteration
+                if (val) {
+                    kvMap[rawKey] = val;
+                    i = j;
+                    continue;
+                }
+            } else {
+                if (rawKey && val) kvMap[rawKey] = val;
+            }
+        }
+        i++;
     }
 
-    // ── Expiry Time ───────────────────────────────────────────────────────
-    const timeVal = kvMap[findKey(kvMap, ['expiry_time', 'time', 'pickup_time', 'expiry_time'])] || '';
-    if (timeVal) {
-        const parsed = parseTimeString(timeVal);
-        if (parsed) result.expiryTime = parsed;
+    return kvMap;
+}
+
+// ─── Step 4: Map parsed KV → donation form fields ────────────────────────────
+
+function mapToDonationFields(kvMap) {
+    const result = {};
+
+    const get = (...candidates) => {
+        // First try exact matches among the candidates
+        for (const c of candidates) {
+            if (kvMap[c]) return kvMap[c];
+        }
+        // Then try fuzzy matches: any stored key that contains any candidate
+        for (const c of candidates) {
+            const match = Object.keys(kvMap).find(k => k.includes(c) || c.includes(k));
+            if (match) return kvMap[match];
+        }
+        return null;
+    };
+
+    // Title
+    const title = get('title', 'donation_title', 'food_item', 'item', 'name');
+    if (title) result.title = title;
+
+    // Description
+    const desc = get('description', 'desc', 'details', 'notes');
+    if (desc) result.description = desc;
+
+    // Food Type
+    const rawFoodType = get('food_type', 'foodtype', 'type');
+    if (rawFoodType) result.foodType = normalizeFoodType(rawFoodType);
+
+    // Food Category
+    const rawCat = get('category', 'food_category', 'cat');
+    if (rawCat) result.foodCategory = normalizeFoodCategory(rawCat);
+
+    // Storage
+    const rawStorage = get('storage', 'storage_req', 'storage_requirement');
+    if (rawStorage) result.storageReq = normalizeStorage(rawStorage);
+
+    // Quantity
+    const qty = get('quantity', 'qty', 'amount', 'portions', 'servings', 'units');
+    if (qty) result.quantity = qty;
+
+    // Perishability
+    const rawPerish = get('perishability', 'perishable', 'urgency');
+    if (rawPerish) result.perishability = normalizePerishability(rawPerish);
+
+    // Expiry Date
+    const rawDate = get('expiry_date', 'expiry', 'best_before', 'use_by', 'expires', 'expiration_date', 'expiration');
+    if (rawDate) {
+        const d = parseDateString(rawDate);
+        if (d) result.expiryDate = d;
     }
 
-    // ── Pickup Address ────────────────────────────────────────────────────
-    const addrKey = findKey(kvMap, ['pickup_address', 'address', 'location', 'pickup_location', 'venue']);
-    if (addrKey) result.pickupAddress = kvMap[addrKey];
-
-    // ── Fallback: free-text scan for dates if not detected above ─────────
-    if (!result.expiryDate) {
-        const dateMatch = fullText.match(/(\d{4}-\d{2}-\d{2})/);
-        if (dateMatch) result.expiryDate = dateMatch[1];
+    // Expiry Time
+    const rawTime = get('expiry_time', 'time');
+    if (rawTime) {
+        const t = parseTimeString(rawTime);
+        if (t) result.expiryTime = t;
     }
+
+    // Pickup Address
+    const addr = get('pickup_address', 'address', 'location', 'pickup_location', 'venue');
+    if (addr) result.pickupAddress = addr;
 
     return result;
 }
 
-// ─── Normalization Helpers ────────────────────────────────────────────────────
-
-function findKey(map, candidates) {
-    for (const c of candidates) {
-        if (map[c]) return c;
-        // Fuzzy: find any key that starts with any candidate
-        const match = Object.keys(map).find(k => k.startsWith(c) || c.startsWith(k));
-        if (match) return match;
-    }
-    return null;
-}
+// ─── Normalisation helpers ────────────────────────────────────────────────────
 
 function normalizeFoodType(raw) {
     const r = raw.toLowerCase();
-    if (r.includes('prepared') || r.includes('cooked') || r.includes('meal') || r.includes('meals')) return 'Prepared Meals';
+    if (r.includes('prepared') || r.includes('ready') || r.includes('meal')) return 'Prepared Meals';
     if (r.includes('bakery') || r.includes('bread') || r.includes('pastry')) return 'Bakery Items';
     if (r.includes('produce') || r.includes('vegetable') || r.includes('fruit')) return 'Fresh Produce';
     if (r.includes('dairy') || r.includes('milk') || r.includes('cheese')) return 'Dairy Products';
     if (r.includes('packaged') || r.includes('canned') || r.includes('tinned')) return 'Packaged Food';
     if (r.includes('beverage') || r.includes('drink') || r.includes('juice')) return 'Beverages';
     if (r.includes('event') || r.includes('leftover')) return 'Event Leftovers';
-    // Return as-is if no match (capitalised)
     return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
@@ -179,7 +246,7 @@ function normalizeFoodCategory(raw) {
     const r = raw.toLowerCase();
     if (r.includes('cooked') || r.includes('ready') || r.includes('prepared') || r.includes('hot')) return 'cooked';
     if (r.includes('raw') || r.includes('fresh') || r.includes('uncooked') || r.includes('ingredient')) return 'raw';
-    if (r.includes('packaged') || r.includes('canned') || r.includes('sealed') || r.includes('packed')) return 'packaged';
+    if (r.includes('packaged') || r.includes('canned') || r.includes('sealed')) return 'packaged';
     return null;
 }
 
@@ -193,46 +260,36 @@ function normalizeStorage(raw) {
 
 function normalizePerishability(raw) {
     const r = raw.toLowerCase();
-    if (r.includes('high') || r.includes('very') || r.includes('urgent') || r.includes('critical')) return 'high';
+    if (r.includes('high') || r.includes('very') || r.includes('urgent')) return 'high';
     if (r.includes('medium') || r.includes('moderate') || r.includes('normal')) return 'medium';
     if (r.includes('low') || r.includes('long') || r.includes('shelf')) return 'low';
     return null;
 }
 
 function parseDateString(raw) {
-    // Try YYYY-MM-DD
+    // YYYY-MM-DD
     const iso = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
     if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-
-    // Try DD/MM/YYYY or MM/DD/YYYY
+    // DD/MM/YYYY
     const slash = raw.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (slash) {
-        const y = slash[3], m = slash[2].padStart(2, '0'), d = slash[1].padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    }
-
-    // Try "March 5, 2026" or "5 March 2026"
-    const months = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
-    const textDate = raw.toLowerCase().match(/(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})/);
-    if (textDate) return `${textDate[3]}-${months[textDate[2]]}-${textDate[1].padStart(2, '0')}`;
-
-    const textDate2 = raw.toLowerCase().match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2}),?\s+(\d{4})/);
-    if (textDate2) return `${textDate2[3]}-${months[textDate2[1]]}-${textDate2[2].padStart(2, '0')}`;
-
+    if (slash) return `${slash[3]}-${slash[2].padStart(2, '0')}-${slash[1].padStart(2, '0')}`;
+    // "5 March 2026" or "March 5, 2026"
+    const M = { jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12' };
+    const t1 = raw.toLowerCase().match(/(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})/);
+    if (t1) return `${t1[3]}-${M[t1[2]]}-${t1[1].padStart(2, '0')}`;
+    const t2 = raw.toLowerCase().match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2}),?\s+(\d{4})/);
+    if (t2) return `${t2[3]}-${M[t2[1]]}-${t2[2].padStart(2, '0')}`;
     return null;
 }
 
 function parseTimeString(raw) {
-    // HH:MM or HH:MM AM/PM
     const t = raw.match(/(\d{1,2}):(\d{2})\s*(am|pm)?/i);
-    if (t) {
-        let h = parseInt(t[1]);
-        const m = t[2];
-        if (t[3]?.toLowerCase() === 'pm' && h < 12) h += 12;
-        if (t[3]?.toLowerCase() === 'am' && h === 12) h = 0;
-        return `${String(h).padStart(2, '0')}:${m}`;
-    }
-    return null;
+    if (!t) return null;
+    let h = parseInt(t[1]);
+    const m = t[2];
+    if (t[3]?.toLowerCase() === 'pm' && h < 12) h += 12;
+    if (t[3]?.toLowerCase() === 'am' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${m}`;
 }
 
 // ─── Controller ───────────────────────────────────────────────────────────────
@@ -244,27 +301,47 @@ export const scanReceipt = async (req, res, next) => {
             throw new Error('No receipt file provided. Please upload an image or PDF.');
         }
 
-        // Extract text via Azure Computer Vision Read API
-        const lines = await extractTextWithAzureOCR(req.file.buffer, req.file.mimetype);
+        // ── Call Azure Document Intelligence ─────────────────────────────
+        const analyzeResult = await analyzeWithDI(req.file.buffer, req.file.mimetype);
 
-        if (!lines || lines.length === 0) {
+        // ── Extract text lines + any native KV pairs from DI result ───────
+        const { lines, nativeKV } = extractFromDIResult(analyzeResult);
+
+        if (lines.length === 0) {
             return res.status(422).json({
                 success: false,
-                message: 'Could not extract any text from the uploaded document. Please ensure the image is clear and well-lit.',
+                message: 'Document Intelligence could not read any text from this document. Please ensure the image is clear and well-lit.',
                 extractedFields: {},
                 rawLines: [],
             });
         }
 
-        // Parse extracted text into donation fields
-        const extractedFields = parseReceiptLines(lines);
+        // ── Parse the lines into a KV map (handles multi-line format) ─────
+        const parsedKV = parseMultiLineText(lines);
+
+        // Merge: native DI KV pairs take priority; parsed lines fill the gaps
+        const mergedKV = { ...parsedKV, ...nativeKV };
+
+        // ── Map to donation form fields ───────────────────────────────────
+        const extractedFields = mapToDonationFields(mergedKV);
+
+        if (Object.keys(extractedFields).length === 0) {
+            return res.status(422).json({
+                success: false,
+                message: 'Could not map any fields from this document. Please ensure it follows the expected format (FIELD: Value).',
+                extractedFields: {},
+                rawLines: lines,
+            });
+        }
 
         res.status(200).json({
             success: true,
             extractedFields,
             rawLines: lines,
             totalFieldsExtracted: Object.keys(extractedFields).length,
+            method: 'Azure Document Intelligence (prebuilt-layout)',
         });
+
     } catch (error) {
         next(error);
     }

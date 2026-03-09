@@ -100,7 +100,7 @@ function ReceiptScannerPanel({ onFieldsFilled, disabled }: ScannerPanelProps) {
         toast({
           variant: 'destructive',
           title: 'Nothing extracted',
-          description: 'Could not read donation fields from this document. Please ensure it\'s clear and well-lit.',
+          description: 'Could not read donation fields from this document.',
         });
         return;
       }
@@ -109,15 +109,14 @@ function ReceiptScannerPanel({ onFieldsFilled, disabled }: ScannerPanelProps) {
       onFieldsFilled(extractedFields);
 
       toast({
-        title: `✨ ${totalFieldsExtracted} field${totalFieldsExtracted !== 1 ? 's' : ''} auto-filled!`,
-        description: 'Review and adjust any fields before publishing.',
+        title: `✨ ${totalFieldsExtracted} fields auto-filled!`,
       });
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
       toast({
         variant: 'destructive',
         title: 'Scan failed',
-        description: e.response?.data?.message || 'Could not scan the receipt. Please try again.',
+        description: e.response?.data?.message || 'Could not scan the receipt.',
       });
     } finally {
       setScanning(false);
@@ -146,154 +145,96 @@ function ReceiptScannerPanel({ onFieldsFilled, disabled }: ScannerPanelProps) {
 
   return (
     <Card className={cn(
-      'border-2 overflow-hidden rounded-2xl transition-all duration-300',
-      scanResult
-        ? 'border-amber-400/60 shadow-amber-400/10 shadow-lg bg-amber-500/[0.02]'
-        : 'border-primary/30 border-dashed shadow-sm'
+      'border overflow-hidden rounded-xl transition-all duration-300 shadow-sm',
+      scanResult ? 'border-amber-400 bg-amber-50/30' : 'border-dashed border-primary/20'
     )}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-xl">
-          <div className="relative">
-            <ScanLine className="h-5 w-5 text-primary" />
-            {scanResult && (
-              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse" />
-            )}
-          </div>
-          Scan Receipt / Document
-          <Badge className="ml-auto text-[10px] font-black uppercase tracking-widest bg-primary/10 text-primary border-primary/20 hover:bg-primary/10">
-            <Sparkles className="h-3 w-3 mr-1" />
-            AI Powered
-          </Badge>
-        </CardTitle>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Upload a donation confirmation or food receipt — Azure AI will read it and auto-fill the form below.
-        </p>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        {/* Drop Zone */}
+      <CardContent className="p-3">
         {!previewUrl ? (
           <label
             className={cn(
-              'flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200',
-              dragOver
-                ? 'border-primary bg-primary/5 scale-[1.01]'
-                : 'border-border/50 bg-muted/20 hover:border-primary/50 hover:bg-primary/5',
+              'flex items-center justify-between gap-4 p-3 rounded-lg border border-dashed cursor-pointer transition-all duration-200',
+              dragOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/10 hover:border-primary/50',
               disabled && 'opacity-50 cursor-not-allowed'
             )}
             onDragOver={e => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
           >
-            <div className={cn(
-              'h-14 w-14 rounded-2xl flex items-center justify-center transition-colors',
-              dragOver ? 'bg-primary/20' : 'bg-muted/50'
-            )}>
-              <FileText className={cn('h-7 w-7 transition-colors', dragOver ? 'text-primary' : 'text-muted-foreground/50')} />
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-primary/10">
+                <ScanLine className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold">Auto-fill with Receipt</p>
+                <p className="text-[10px] text-muted-foreground uppercase opacity-70">Saves time by scanning details</p>
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-sm font-bold text-foreground">Drop your receipt here</p>
-              <p className="text-xs text-muted-foreground mt-1">or <span className="text-primary font-bold underline">browse files</span></p>
-              <p className="text-[10px] text-muted-foreground/60 mt-2 uppercase tracking-widest font-bold">JPG · PNG · WEBP · PDF up to 10MB</p>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-[9px] h-5 bg-primary/5 text-primary border-primary/20">
+                <Sparkles className="h-3 w-3 mr-1" /> AI
+              </Badge>
+              <span className="text-xs text-primary font-bold underline px-2">Browse</span>
             </div>
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/bmp,application/pdf"
+              accept="image/*,application/pdf"
               className="hidden"
               onChange={handleInputChange}
               disabled={disabled}
             />
           </label>
         ) : (
-          /* Preview + Scan Status */
-          <div className="flex gap-4 p-4 rounded-xl bg-muted/30 border border-border/50 relative">
-            {/* Thumbnail */}
-            <div className="h-20 w-20 shrink-0 rounded-xl overflow-hidden border border-border/50 shadow-sm bg-muted flex items-center justify-center">
+          <div className="flex items-center gap-3 relative pr-10">
+            <div className="h-12 w-12 shrink-0 rounded-lg overflow-hidden border border-border shadow-sm bg-muted flex items-center justify-center">
               {previewUrl.startsWith('blob:') && fileName?.match(/\.(jpg|jpeg|png|webp|bmp)$/i) ? (
                 <img src={previewUrl} alt="Receipt" className="w-full h-full object-cover" />
               ) : (
-                <FileText className="h-8 w-8 text-muted-foreground/50" />
+                <FileText className="h-5 w-5 text-muted-foreground/50" />
               )}
             </div>
-
-            {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold truncate">{fileName}</p>
+              <p className="text-xs font-bold truncate">{fileName}</p>
               {scanning ? (
-                <div className="flex items-center gap-2 mt-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-xs text-primary font-bold">Azure AI is reading your document…</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                  <span className="text-[10px] text-primary font-bold uppercase tracking-wider">Analyzing...</span>
                 </div>
               ) : scanResult ? (
-                <div className="mt-2 space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-emerald-500" />
-                    <span className="text-xs font-bold text-emerald-600">
-                      {scanResult.totalFieldsExtracted} field{scanResult.totalFieldsExtracted !== 1 ? 's' : ''} extracted
+                <div className="flex items-center gap-3 mt-1">
+                  <div className="flex items-center gap-1">
+                    <Check className="h-3 w-3 text-emerald-500" />
+                    <span className="text-[11px] font-bold text-emerald-600">
+                      Found {scanResult.totalFieldsExtracted} fields
                     </span>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setShowRawLines(v => !v)}
-                    className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors font-bold uppercase tracking-widest"
+                    onClick={() => setShowRawLines(!showRawLines)}
+                    className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground hover:text-foreground"
                   >
-                    {showRawLines ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    {showRawLines ? 'Hide' : 'View'} raw OCR text
+                    {showRawLines ? 'Hide logs' : 'View logs'}
                   </button>
                 </div>
               ) : null}
             </div>
-
-            {/* Clear */}
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={clearScan}
-              className="absolute top-2 right-2 p-1 rounded-full bg-muted hover:bg-destructive/10 hover:text-destructive transition-colors"
+              className="absolute right-0 h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive"
             >
-              <X className="h-3.5 w-3.5" />
-            </button>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         )}
 
-        {/* Scanning shimmer overlay (alternative label) */}
-        {scanning && (
-          <div className="flex items-center justify-center gap-3 py-2">
-            <div className="flex gap-1">
-              {[0, 1, 2, 3].map(i => (
-                <div
-                  key={i}
-                  className="h-1.5 w-6 rounded-full bg-primary/40 animate-pulse"
-                  style={{ animationDelay: `${i * 150}ms` }}
-                />
-              ))}
-            </div>
-            <span className="text-xs font-bold text-primary uppercase tracking-widest">Scanning…</span>
-            <div className="flex gap-1">
-              {[3, 2, 1, 0].map(i => (
-                <div
-                  key={i}
-                  className="h-1.5 w-6 rounded-full bg-primary/40 animate-pulse"
-                  style={{ animationDelay: `${i * 150}ms` }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Raw OCR Lines */}
         {showRawLines && scanResult?.rawLines && (
-          <div className="rounded-xl bg-muted/40 border border-border/50 p-3 max-h-40 overflow-y-auto">
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Raw OCR Output</p>
+          <div className="mt-3 rounded-lg bg-black/5 p-2 max-h-24 overflow-y-auto">
             {scanResult.rawLines.map((line, i) => (
-              <p key={i} className="text-xs text-muted-foreground font-mono leading-5">{line}</p>
+              <p key={i} className="text-[9px] text-muted-foreground font-mono leading-tight">{line}</p>
             ))}
           </div>
         )}
-
-        {/* Hint */}
-        <p className="text-[10px] text-muted-foreground/60 text-center uppercase tracking-widest font-bold">
-          Fields filled from the scan are highlighted below — review before publishing
-        </p>
       </CardContent>
     </Card>
   );
