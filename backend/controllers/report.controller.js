@@ -8,6 +8,11 @@
 import Donation from '../models/Donation.model.js';
 import User from '../models/User.model.js';
 import ImpactMetric from '../models/ImpactMetric.model.js';
+import SafetyRule from '../models/SafetyRule.model.js';
+import RejectionLog from '../models/RejectionLog.model.js';
+import VerificationLog from '../models/VerificationLog.model.js';
+import ViolationLog from '../models/ViolationLog.model.js';
+import AuditLog from '../models/AuditLog.model.js';
 import mongoose from 'mongoose';
 import { convertToWeight, calculateMeals, calculateCo2Savings } from '../utils/impact.js';
 
@@ -553,4 +558,64 @@ const getImpactSummary = async (req, res, next) => {
     }
 };
 
-export { getDonationReport, getNgoUtilizationReport, getVolunteerPerformanceReport, getImpactSummary };
+const getSafetyComplianceReport = async (req, res, next) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        let dateFilter = {};
+        if (startDate || endDate) {
+            dateFilter.createdAt = {};
+            if (startDate) dateFilter.createdAt.$gte = new Date(startDate);
+            if (endDate) dateFilter.createdAt.$lte = new Date(endDate);
+        }
+
+        // 1. Safety Rejections (Rejections flagged as safety issues)
+        const safetyRejections = await RejectionLog.find({
+            ...dateFilter,
+            isSafetyIssue: true
+        }).populate('donationId ngoId');
+
+        // 2. Expired/Unsafe Food (Donations that expired before being picked up)
+        const unsafeDonations = await Donation.find({
+            ...dateFilter,
+            status: { $in: ['expired', 'rejected'] }
+        }).populate('donor');
+
+        // 3. User Violations (Direct violations logged by admins)
+        const userViolations = await ViolationLog.find(dateFilter).populate('userId adminId');
+
+        // 4. Verification Audits (History of user verification actions)
+        const verificationHistory = await VerificationLog.find(dateFilter).populate('userId adminId');
+
+        // 5. Admin Governance Actions (Filtered from generic AuditLog)
+        const adminActions = await AuditLog.find({
+            ...dateFilter,
+            category: { $in: ['safety', 'system'] }
+        }).populate('userId');
+
+        // 6. Summary Metrics
+        const reportSummary = {
+            totalSafetyRejections: safetyRejections.length,
+            expiredEntries: unsafeDonations.filter(d => d.status === 'expired').length,
+            violationsRecorded: userViolations.length,
+            pendingVerifications: verificationHistory.filter(v => v.status === 'pending').length,
+            totalGovernanceActions: adminActions.length
+        };
+
+        res.status(200).json({
+            success: true,
+            summary: reportSummary,
+            data: {
+                safetyRejections,
+                unsafeDonations,
+                userViolations,
+                verificationHistory,
+                governanceActions: adminActions
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export { getDonationReport, getNgoUtilizationReport, getVolunteerPerformanceReport, getImpactSummary, getSafetyComplianceReport };

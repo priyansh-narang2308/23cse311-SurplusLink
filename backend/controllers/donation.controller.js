@@ -13,6 +13,7 @@ import Donation from '../models/Donation.model.js';
 import User from '../models/User.model.js';
 import { createNotification } from '../utils/notification.js';
 import AuditLog from '../models/AuditLog.model.js';
+import RejectionLog from '../models/RejectionLog.model.js';
 
 import SafetyRule from '../models/SafetyRule.model.js';
 
@@ -909,6 +910,20 @@ export const rejectDonation = async (req, res, next) => {
         // Update timeline
         donation.addStatusHistory(req.user._id, `Rejected by NGO. Reason: ${rejectionReason}`);
         await donation.save();
+
+        // Governance: Create Rejection Log Entry (US 4.4)
+        const isSafety = rejectionReason.toLowerCase().includes('safety') ||
+            rejectionReason.toLowerCase().includes('unsafe') ||
+            rejectionReason.toLowerCase().includes('spoil') ||
+            rejectionReason.toLowerCase().includes('mold') ||
+            rejectionReason.includes('[Safety Issue]');
+
+        await RejectionLog.create({
+            donationId: donation._id,
+            ngoId: req.user._id,
+            rejectionReason: rejectionReason,
+            isSafetyIssue: isSafety
+        });
 
         let formattedReason = rejectionReason;
         const reasonMatch = rejectionReason.match(/^\[(.*?)\]\s*(.*)$/);
