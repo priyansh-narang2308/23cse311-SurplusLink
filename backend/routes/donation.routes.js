@@ -26,6 +26,7 @@ import {
     getPotentialVolunteers,
     getAdminStats,
 } from '../controllers/donation.controller.js';
+import { scanReceipt, receiptUpload } from '../controllers/receiptScan.controller.js';
 import { protect, roleBasedAccess } from '../middleware/auth.middleware.js';
 import upload from '../config/cloudinary.js';
 
@@ -60,6 +61,7 @@ router.get('/:id/optimized-route', roleBasedAccess(['volunteer']), getOptimizedR
 
 //donor sp ecific routes
 router.post('/', roleBasedAccess(['donor']), donationLimiter, upload.array('photos', 5), createDonation);
+router.post('/scan-receipt', roleBasedAccess(['donor']), receiptUpload.single('receipt'), scanReceipt);
 router.get('/my-donations', roleBasedAccess(['donor']), getDonorHistory);
 router.get('/stats', roleBasedAccess(['donor']), getDonorStats);
 router.patch('/:id/cancel', roleBasedAccess(['donor']), cancelDonation);

@@ -1,5 +1,5 @@
-/** Multi-step form for posting new food donations */
-import { useState, useEffect } from 'react';
+/** Multi-step form for posting new food donations — with Azure Document Intelligence receipt scanner */
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,11 +12,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { Upload, MapPin, Clock, Package, Lock, AlertTriangle, X, Check, ThermometerSnowflake } from 'lucide-react';
+import {
+  Upload, MapPin, Clock, Package, Lock, AlertTriangle, X, Check,
+  ScanLine, Sparkles, FileText, Loader2, ChevronDown, ChevronUp,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { VerificationBanner } from '@/components/layout/verification-banner';
 import { cn } from '@/lib/utils';
 import DonationService from '@/services/donation.service';
+import api from '@/lib/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { MapPicker } from '@/components/ui/map-picker';
@@ -53,6 +57,250 @@ const donationSchema = z.object({
 
 type DonationFormValues = z.infer<typeof donationSchema>;
 
+// Fields that the scanner can fill — used for highlight animation
+type ScannedFieldKey = keyof Omit<DonationFormValues, 'pickupWindowStart' | 'pickupWindowEnd'>;
+
+// ─── Receipt Scanner Panel ────────────────────────────────────────────────────
+
+interface ScannerPanelProps {
+  onFieldsFilled: (fields: Partial<DonationFormValues>) => void;
+  disabled: boolean;
+}
+
+function ReceiptScannerPanel({ onFieldsFilled, disabled }: ScannerPanelProps) {
+  const { toast } = useToast();
+  const [scanning, setScanning] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [scanResult, setScanResult] = useState<{ totalFieldsExtracted: number; rawLines: string[] } | null>(null);
+  const [showRawLines, setShowRawLines] = useState(false);
+
+  const handleFile = useCallback(async (file: File) => {
+    if (!file) return;
+
+    // Show preview
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    setFileName(file.name);
+    setScanResult(null);
+    setScanning(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('receipt', file);
+
+      const res = await api.post('/donations/scan-receipt', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const { extractedFields, rawLines, totalFieldsExtracted } = res.data;
+
+      if (totalFieldsExtracted === 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Nothing extracted',
+          description: 'Could not read donation fields from this document. Please ensure it\'s clear and well-lit.',
+        });
+        return;
+      }
+
+      setScanResult({ totalFieldsExtracted, rawLines });
+      onFieldsFilled(extractedFields);
+
+      toast({
+        title: `✨ ${totalFieldsExtracted} field${totalFieldsExtracted !== 1 ? 's' : ''} auto-filled!`,
+        description: 'Review and adjust any fields before publishing.',
+      });
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast({
+        variant: 'destructive',
+        title: 'Scan failed',
+        description: e.response?.data?.message || 'Could not scan the receipt. Please try again.',
+      });
+    } finally {
+      setScanning(false);
+    }
+  }, [onFieldsFilled, toast]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+    e.target.value = '';
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  };
+
+  const clearScan = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setFileName(null);
+    setScanResult(null);
+  };
+
+  return (
+    <Card className={cn(
+      'border-2 overflow-hidden rounded-2xl transition-all duration-300',
+      scanResult
+        ? 'border-amber-400/60 shadow-amber-400/10 shadow-lg bg-amber-500/[0.02]'
+        : 'border-primary/30 border-dashed shadow-sm'
+    )}>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <div className="relative">
+            <ScanLine className="h-5 w-5 text-primary" />
+            {scanResult && (
+              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse" />
+            )}
+          </div>
+          Scan Receipt / Document
+          <Badge className="ml-auto text-[10px] font-black uppercase tracking-widest bg-primary/10 text-primary border-primary/20 hover:bg-primary/10">
+            <Sparkles className="h-3 w-3 mr-1" />
+            AI Powered
+          </Badge>
+        </CardTitle>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Upload a donation confirmation or food receipt — Azure AI will read it and auto-fill the form below.
+        </p>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {/* Drop Zone */}
+        {!previewUrl ? (
+          <label
+            className={cn(
+              'flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200',
+              dragOver
+                ? 'border-primary bg-primary/5 scale-[1.01]'
+                : 'border-border/50 bg-muted/20 hover:border-primary/50 hover:bg-primary/5',
+              disabled && 'opacity-50 cursor-not-allowed'
+            )}
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+          >
+            <div className={cn(
+              'h-14 w-14 rounded-2xl flex items-center justify-center transition-colors',
+              dragOver ? 'bg-primary/20' : 'bg-muted/50'
+            )}>
+              <FileText className={cn('h-7 w-7 transition-colors', dragOver ? 'text-primary' : 'text-muted-foreground/50')} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-foreground">Drop your receipt here</p>
+              <p className="text-xs text-muted-foreground mt-1">or <span className="text-primary font-bold underline">browse files</span></p>
+              <p className="text-[10px] text-muted-foreground/60 mt-2 uppercase tracking-widest font-bold">JPG · PNG · WEBP · PDF up to 10MB</p>
+            </div>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/bmp,application/pdf"
+              className="hidden"
+              onChange={handleInputChange}
+              disabled={disabled}
+            />
+          </label>
+        ) : (
+          /* Preview + Scan Status */
+          <div className="flex gap-4 p-4 rounded-xl bg-muted/30 border border-border/50 relative">
+            {/* Thumbnail */}
+            <div className="h-20 w-20 shrink-0 rounded-xl overflow-hidden border border-border/50 shadow-sm bg-muted flex items-center justify-center">
+              {previewUrl.startsWith('blob:') && fileName?.match(/\.(jpg|jpeg|png|webp|bmp)$/i) ? (
+                <img src={previewUrl} alt="Receipt" className="w-full h-full object-cover" />
+              ) : (
+                <FileText className="h-8 w-8 text-muted-foreground/50" />
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold truncate">{fileName}</p>
+              {scanning ? (
+                <div className="flex items-center gap-2 mt-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-xs text-primary font-bold">Azure AI is reading your document…</span>
+                </div>
+              ) : scanResult ? (
+                <div className="mt-2 space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <Check className="h-4 w-4 text-emerald-500" />
+                    <span className="text-xs font-bold text-emerald-600">
+                      {scanResult.totalFieldsExtracted} field{scanResult.totalFieldsExtracted !== 1 ? 's' : ''} extracted
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowRawLines(v => !v)}
+                    className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors font-bold uppercase tracking-widest"
+                  >
+                    {showRawLines ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    {showRawLines ? 'Hide' : 'View'} raw OCR text
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Clear */}
+            <button
+              type="button"
+              onClick={clearScan}
+              className="absolute top-2 right-2 p-1 rounded-full bg-muted hover:bg-destructive/10 hover:text-destructive transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Scanning shimmer overlay (alternative label) */}
+        {scanning && (
+          <div className="flex items-center justify-center gap-3 py-2">
+            <div className="flex gap-1">
+              {[0, 1, 2, 3].map(i => (
+                <div
+                  key={i}
+                  className="h-1.5 w-6 rounded-full bg-primary/40 animate-pulse"
+                  style={{ animationDelay: `${i * 150}ms` }}
+                />
+              ))}
+            </div>
+            <span className="text-xs font-bold text-primary uppercase tracking-widest">Scanning…</span>
+            <div className="flex gap-1">
+              {[3, 2, 1, 0].map(i => (
+                <div
+                  key={i}
+                  className="h-1.5 w-6 rounded-full bg-primary/40 animate-pulse"
+                  style={{ animationDelay: `${i * 150}ms` }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Raw OCR Lines */}
+        {showRawLines && scanResult?.rawLines && (
+          <div className="rounded-xl bg-muted/40 border border-border/50 p-3 max-h-40 overflow-y-auto">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Raw OCR Output</p>
+            {scanResult.rawLines.map((line, i) => (
+              <p key={i} className="text-xs text-muted-foreground font-mono leading-5">{line}</p>
+            ))}
+          </div>
+        )}
+
+        {/* Hint */}
+        <p className="text-[10px] text-muted-foreground/60 text-center uppercase tracking-widest font-bold">
+          Fields filled from the scan are highlighted below — review before publishing
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export default function PostDonation() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -66,6 +314,8 @@ export default function PostDonation() {
   const [expiryWarning, setExpiryWarning] = useState(false);
   const [pickupWarning, setPickupWarning] = useState(false);
   const [customAllergen, setCustomAllergen] = useState('');
+  // Track which fields were auto-filled from the scan for highlight animation
+  const [scannedFields, setScannedFields] = useState<Set<string>>(new Set());
 
   const isVerified = user?.status === 'active';
 
@@ -127,6 +377,40 @@ export default function PostDonation() {
       }
     }
   }, [watchExpiryDate, watchExpiryTime, watchPickupEnd, toast]);
+
+  // Called when the scanner returns extracted fields
+  const handleScannedFields = useCallback((fields: Partial<DonationFormValues>) => {
+    const filled = new Set<string>();
+
+    if (fields.title) { form.setValue('title', fields.title); filled.add('title'); }
+    if (fields.description) { form.setValue('description', fields.description); filled.add('description'); }
+    if (fields.quantity) { form.setValue('quantity', fields.quantity); filled.add('quantity'); }
+    if (fields.expiryDate) { form.setValue('expiryDate', fields.expiryDate); filled.add('expiryDate'); }
+    if (fields.expiryTime) { form.setValue('expiryTime', fields.expiryTime); filled.add('expiryTime'); }
+    if (fields.pickupAddress) { form.setValue('pickupAddress', fields.pickupAddress); filled.add('pickupAddress'); }
+
+    if (fields.foodType) {
+      form.setValue('foodType', fields.foodType);
+      filled.add('foodType');
+    }
+    if (fields.foodCategory && ['cooked', 'raw', 'packaged'].includes(fields.foodCategory)) {
+      form.setValue('foodCategory', fields.foodCategory as 'cooked' | 'raw' | 'packaged');
+      filled.add('foodCategory');
+    }
+    if (fields.storageReq && ['dry', 'cold', 'frozen'].includes(fields.storageReq)) {
+      form.setValue('storageReq', fields.storageReq as 'dry' | 'cold' | 'frozen');
+      filled.add('storageReq');
+    }
+    if (fields.perishability && ['high', 'medium', 'low'].includes(fields.perishability)) {
+      form.setValue('perishability', fields.perishability as 'high' | 'medium' | 'low');
+      filled.add('perishability');
+    }
+
+    setScannedFields(filled);
+
+    // Clear highlight animation after 8 seconds
+    setTimeout(() => setScannedFields(new Set()), 8000);
+  }, [form]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -221,6 +505,12 @@ export default function PostDonation() {
     }
   };
 
+  // Helper: CSS class for fields highlighted after scan
+  const getFieldHighlight = (fieldName: ScannedFieldKey) =>
+    scannedFields.has(fieldName)
+      ? 'ring-2 ring-amber-400 ring-offset-1 rounded-xl transition-all duration-700'
+      : '';
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <VerificationBanner />
@@ -228,6 +518,9 @@ export default function PostDonation() {
         title="Post a Donation"
         description="Share your surplus food with NGOs in your area."
       />
+
+      {/* ── Receipt Scanner — shown prominently at top ── */}
+      <ReceiptScannerPanel onFieldsFilled={handleScannedFields} disabled={!isVerified} />
 
       {expiryWarning && (
         <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-xl flex items-center gap-3 animate-pulse">
@@ -243,10 +536,16 @@ export default function PostDonation() {
               <CardTitle className="flex items-center gap-2 text-xl">
                 <Package className="h-5 w-5 text-primary" />
                 Food Details
+                {scannedFields.size > 0 && (
+                  <Badge className="ml-auto text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border-amber-400/20 animate-pulse">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    AI Filled
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
+              <div className={cn("space-y-2", getFieldHighlight('title'))}>
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Title</Label>
                 <Input
                   {...form.register('title')}
@@ -258,10 +557,11 @@ export default function PostDonation() {
               </div>
 
               <div className="grid sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
+                <div className={cn("space-y-2", getFieldHighlight('foodType'))}>
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Food Type</Label>
                   <Select
                     onValueChange={(val) => form.setValue('foodType', val)}
+                    value={form.watch('foodType') || undefined}
                     disabled={!isVerified}
                   >
                     <SelectTrigger className="h-11">
@@ -276,7 +576,7 @@ export default function PostDonation() {
                   {form.formState.errors.foodType && <p className="text-xs text-destructive">{form.formState.errors.foodType.message}</p>}
                 </div>
 
-                <div className="space-y-2">
+                <div className={cn("space-y-2", getFieldHighlight('quantity'))}>
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quantity</Label>
                   <Input
                     {...form.register('quantity')}
@@ -289,9 +589,13 @@ export default function PostDonation() {
               </div>
 
               <div className="grid sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
+                <div className={cn("space-y-2", getFieldHighlight('foodCategory'))}>
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</Label>
-                  <Select onValueChange={(val) => form.setValue('foodCategory', val as "cooked" | "raw" | "packaged")} disabled={!isVerified}>
+                  <Select
+                    onValueChange={(val) => form.setValue('foodCategory', val as "cooked" | "raw" | "packaged")}
+                    value={form.watch('foodCategory') || undefined}
+                    disabled={!isVerified}
+                  >
                     <SelectTrigger className="h-11"><SelectValue placeholder="Select category" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cooked">Cooked Meal (Ready to eat)</SelectItem>
@@ -301,9 +605,13 @@ export default function PostDonation() {
                   </Select>
                   {form.formState.errors.foodCategory && <p className="text-xs text-destructive">{form.formState.errors.foodCategory.message}</p>}
                 </div>
-                <div className="space-y-2">
+                <div className={cn("space-y-2", getFieldHighlight('storageReq'))}>
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Storage</Label>
-                  <Select onValueChange={(val) => form.setValue('storageReq', val as "dry" | "cold" | "frozen")} disabled={!isVerified}>
+                  <Select
+                    onValueChange={(val) => form.setValue('storageReq', val as "dry" | "cold" | "frozen")}
+                    value={form.watch('storageReq') || undefined}
+                    disabled={!isVerified}
+                  >
                     <SelectTrigger className="h-11"><SelectValue placeholder="Storage needs" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="dry">Dry / Room Temp</SelectItem>
@@ -315,7 +623,7 @@ export default function PostDonation() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className={cn("space-y-2", getFieldHighlight('description'))}>
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description</Label>
                 <Textarea
                   {...form.register('description')}
@@ -327,11 +635,11 @@ export default function PostDonation() {
                 {form.formState.errors.description && <p className="text-xs text-destructive">{form.formState.errors.description.message}</p>}
               </div>
 
-              <div className="space-y-2">
+              <div className={cn("space-y-2", getFieldHighlight('perishability'))}>
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Perishability</Label>
                 <Select
                   onValueChange={(val: 'high' | 'medium' | 'low') => form.setValue('perishability', val)}
-                  defaultValue="medium"
+                  value={form.watch('perishability') || 'medium'}
                   disabled={!isVerified}
                 >
                   <SelectTrigger className="h-11">
@@ -365,7 +673,6 @@ export default function PostDonation() {
                     </div>
                   ))}
 
-                  {/* Display added custom allergens */}
                   {selectedAllergens.filter(a => !allergensList.includes(a)).map(custom => (
                     <Badge key={custom} variant="secondary" className="h-9 px-3 flex gap-2 rounded-lg bg-primary/10 text-primary border-primary/20">
                       {custom}
@@ -380,7 +687,6 @@ export default function PostDonation() {
                   ))}
                 </div>
 
-                {/* Custom Allergen Input */}
                 <div className="flex gap-2 mt-4">
                   <Input
                     placeholder="Other allergen (e.g., Sesame)"
@@ -497,7 +803,7 @@ export default function PostDonation() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
+                <div className={cn("space-y-2", getFieldHighlight('expiryDate'))}>
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Expiry Date</Label>
                   <Input
                     type="date"
@@ -508,7 +814,7 @@ export default function PostDonation() {
                   {form.formState.errors.expiryDate && <p className="text-xs text-destructive">{form.formState.errors.expiryDate.message}</p>}
                 </div>
 
-                <div className="space-y-2">
+                <div className={cn("space-y-2", getFieldHighlight('expiryTime'))}>
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Expiry Time</Label>
                   <Input
                     type="time"
@@ -576,7 +882,6 @@ export default function PostDonation() {
                     initialCenter={coords ? { lat: coords[1], lng: coords[0] } : undefined}
                     onLocationSelect={async (newLocation) => {
                       setCoords([newLocation.lng, newLocation.lat]);
-                      // Reverse geocode to get a readable address
                       try {
                         const geocoder = new google.maps.Geocoder();
                         const response = await geocoder.geocode({ location: newLocation });
@@ -591,7 +896,7 @@ export default function PostDonation() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className={cn("space-y-2", getFieldHighlight('pickupAddress'))}>
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pickup Address</Label>
                 <div className="relative">
                   <Input
