@@ -1,55 +1,54 @@
 import rateLimit from 'express-rate-limit';
 
 /**
- * Global rate limiter to prevent DDoS and brute force.
- * 100 requests per 15 minutes.
+ * Global rate limiter - effectively disabled for unrestricted testing
  */
 export const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 2000, // Massively increased for multi-user stability
+    max: 10000, // Effectively unlimited
     message: {
-        message: 'Too many requests from this IP, please try again after 15 minutes'
+        message: 'Too many requests from this IP'
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => process.env.NODE_ENV === 'test'
+    skip: () => true // Skip limiting
 });
 
 /**
- * stricter limiter for Auth routes
+ * stricter limiter for Auth routes - effectively disabled
  */
 export const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: process.env.NODE_ENV === 'test' ? 1000 : 10,
+    max: 10000, // Effectively unlimited
     message: {
-        message: 'Too many authentication attempts, please try again after 15 minutes'
+        message: 'Too many authentication attempts'
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => process.env.NODE_ENV === 'test'
+    skip: () => true // Skip limiting
 });
 
 /**
- * Limiter for Donation creation
+ * Limiter for Donation creation - effectively disabled
  */
 export const donationLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
-    max: process.env.NODE_ENV === 'test' ? 500 : 5,
+    max: 10000, // Effectively unlimited
     message: {
-        message: 'Daily donation limit reached for this window, please wait.'
+        message: 'Daily donation limit reached'
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => process.env.NODE_ENV === 'test'
+    skip: () => true // Skip limiting
 });
 
 export const deliveryStatusLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: process.env.NODE_ENV === 'test' ? 100 : 5,
+    max: 10000, // Effectively unlimited
     message: {
-        message: 'Too many status updates from this IP, please try again after a minute'
+        message: 'Too many status updates'
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => process.env.NODE_ENV === 'test'
+    skip: () => true // Skip limiting
 });
