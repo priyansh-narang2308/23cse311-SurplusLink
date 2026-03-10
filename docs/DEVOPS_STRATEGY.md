@@ -18,8 +18,9 @@ The following table identifies each component, its source code repository, deplo
 
 | Component | Source Code Repository | Deployment Location | Pre-Deployment Checks | Tools & Libraries |
 | :--- | :--- | :--- | :--- | :--- |
-| **Frontend Dashboard** | [SurplusLink-Frontend](https://github.com/23cse311-Surpluslink/Frontend) | **Vercel** (`https://surpluslink.vercel.app`) | ESLint, TS Compiler, Vitest Unit Tests | React, Vite, Framer Motion, Axios, Shadcn UI |
+| **Frontend Dashboard** | [SurplusLink-Frontend](https://github.com/23cse311-Surpluslink/Frontend) | **Vercel** (`https://surpluslink.vercel.app`) | ESLint, TS Compiler, Vitest Unit Tests | React, Vite, Framer Motion, Axios, IndexedDB (PWA) |
 | **API Backend** | [SurplusLink-Backend](https://github.com/23cse311-Surpluslink/Backend) | **Render** (`https://surpluslink-9fq6.onrender.com`) | Supertest Integration, Vitest, npm audit | Node.js, Express, Mongoose, JWT, Nodemailer |
+| **Message Broker** | Managed via Backend | **CloudAMQP (RabbitMQ)** | Connection Resilience, Fallback Testing | amqplib, Async Queues |
 | **Volunteer Mobile App** | [SurplusLink-Mobile](https://github.com/23cse311-Surpluslink/Mobile) | **App Store / Play Store** | Flutter Analyze, Flutter Test, Widget Testing | Flutter, Dart, Riverpod, Google Maps API |
 | **Database Cluster** | Managed via Backend | **MongoDB Atlas (AWS)** | Schema Validation, IP Whitelisting | Mongoose, GeoJSON, 2dsphere indexing |
 

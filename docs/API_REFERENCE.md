@@ -170,24 +170,48 @@ All error responses follow this standard format:
 }
 ```
 
+## 7. Admin & Governance (`/users/admin` & `/admin`)
+
+### **Get Full Directory / Pending KYC**
+`GET /users/admin/users` | `GET /users/admin/pending`
+- **Access**: Private (Admin)
+- **Description**: Retrieves user directory. Used for flagging violations and reviewing KYC documents.
+- **Success (200)**: Returns arrays of fully populated User models.
+
+### **Verify / Deactivate User**
+`PATCH /users/admin/verify` | `PATCH /users/admin/:id/deactivate`
+- **Access**: Private (Admin)
+- **Body**: `{ "id": "...", "remarks": "..." }`
+- **Effect**: Activates or disables platform access for the specified user.
+
+### **Safety Rules Management**
+`GET /admin/safety-rules` | `POST /admin/safety-rules`
+- **Access**: Private (Admin)
+- **Description**: CRUD operations for enforcing storage requirements (`frozen`, `cold`, `dry`) and max durations based on food types.
+
+### **Audit Trails**
+`GET /admin/audit-logs`
+- **Access**: Private (Admin)
+- **Description**: Fetch immutable logs of all critical actions performed across the system (claims, rejections, verifications).
+
 ---
 
-## 6. Real-Time Tracking Endpoints (`/users`)
+## 8. Analytics & Reporting (`/reports`)
 
-### **Update Background Location**
-`PATCH /users/volunteer/location`
-- **Access**: Private (Volunteer)
-- **Body**:
-```json
-{
-  "lat": 12.9716,
-  "lng": 77.5946
-}
-```
+### **Global Donation Matrix**
+`GET /reports/donations`
+- **Access**: Private (Admin/Donor)
+- **Description**: Aggregates all donations within a specified `startDate` and `endDate`. Used by Donors for CSR tracking and by Admins for Global PDF/CSV exports.
+- **Returns**: Formatted metrics including `Status Breakdown`, `Perishability Counts`, and `Total Impact`.
+
+### **Volunteer Performance Stats**
+`GET /reports/volunteer-performance`
+- **Access**: Private (Admin)
+- **Description**: Advanced metric engine calculating response times, mission success rates, and active/idle patterns for the fleet.
 
 ---
 
-## 7. Data Models (Schema)
+## 9. Data Models (Core Schemas)
 
 ### **User Model**
 | Field | Type | Description |
@@ -196,7 +220,9 @@ All error responses follow this standard format:
 | `role` | Enum | `donor`, `ngo`, `volunteer`, `admin`. |
 | `status` | Enum | `pending`, `active`, `deactivated`. |
 | `isOnline` | Boolean | Volunteer availability toggle. |
-| `trustScore` | Number | 1.0 - 5.0 rating based on history. |
+| `stats.trustScore` | Number | 1.0 - 5.0 rating dynamically calculated. |
+| `stats.completedDonations` | Number | Incremented automatically upon verified delivery. |
+| `violationCount` | Number | Tracked by admins for suspension logic. |
 
 ### **Donation Model**
 | Field | Type | Description |
@@ -204,7 +230,11 @@ All error responses follow this standard format:
 | `status` | Enum | `active`, `assigned`, `picked_up`, `completed`, `cancelled`, `expired`. |
 | `deliveryStatus`| Enum | `idle`, `pending_pickup`, `heading_to_pickup`, `at_pickup`, `picked_up`, `in_transit`, `arrived_at_delivery`, `delivered`. |
 | `perishability` | Enum | `high`, `medium`, `low`. |
-| `expiryDate` | Date | The hard cut-off timestamp for food safety. |
+| `expiryDate` | Date | Evaluated by the Cron Watchdog to auto-expire missions. |
+| `coordinates` | Point | GeoJSON 2dsphere index for Dijkstra optimizations. |
+
+### **AuditLog Model / SafetyRule Model**
+Used for governance (Epic 6). Includes `action`, `category`, `ipAddress`, and dynamic `metadata` for strict compliance tracking.
 
 ---
-*Last Updated: February 2026*
+*Last Updated: March 2026 (Epic 6-9 Release)*

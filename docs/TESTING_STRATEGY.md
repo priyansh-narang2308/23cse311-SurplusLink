@@ -20,19 +20,21 @@ This matrix identifies how each architectural tier is tested and the specific pr
 ## 2. Testing Levels & Methodologies
 
 ### **A. Unit Testing (Isolated Logic)**
-*   **Backend**: Focuses on core algorithms such as the **Intelligent Matching Engine** (Priority scoring based on 40% distance/60% urgency).
-*   **Frontend**: Verifies that components (like the `DonationCard`) render correctly across Light/Dark modes.
-*   **Mobile**: Validates utility functions for distance calculation and timestamp formatting.
+*   **Backend**: Focuses on core algorithms such as the **Intelligent Matching Engine** (Priority scoring based on 40% distance/60% urgency), **Trust Score Calculators**, and **Routing Fallback Logic**.
+*   **Frontend**: Verifies components render correctly and utility pipelines format data accurately (e.g., date formats, distance conversions).
+*   **Mobile/PWA**: Validates utility functions for distance calculation, offline data cueing (`indexedDB`), and timestamp formatting.
 
 ### **B. Integration Testing (Service Interoperability)**
-*   **REST API Level**: Using **Supertest** to verify the end-to-end flow of a donation from "Post Request" to "Ready for Pickup" status.
+*   **REST API Level**: Using **Supertest/Vitest** to verify end-to-end flows (e.g., Donation Lifecycle, Admin User Verification, and Safety Rule CRUD operations).
 *   **Auth Flow**: Verifies that JWT cookies are correctly issued, stored as `HttpOnly`, and rejected when expired.
-*   **Geospatial Logic**: Validates that the search engine correctly excludes donations outside the volunteer's active radius.
+*   **Pathfinding & Routing**: Mocks Google Maps APIs to verify Dijkstra routing responses and fallback approximations when endpoints reject or time out.
+*   **System Degradation**: Simulates RabbitMQ failures to verify synchronous `notification.js` failovers.
 
 ### **C. System & E2E Testing (User Workflows)**
 *   **The Happy Path**: Manual and automated walkthroughs verifying the sequence:  
     `Donor Posts` -> `Matching Engine Prioritizes` -> `NGO Claims` -> `Volunteer Accepts` -> `Delivery Verified`.
 *   **Concurrency Handling**: Testing the system under simulated race conditions (multi-click scenarios) to ensure a mission is never double-assigned.
+*   **Admin Reporting**: Validates PDF/CSV generation and data aggregation logic accuracy for Global Reports.
 
 ---
 
