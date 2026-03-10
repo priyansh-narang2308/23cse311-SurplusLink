@@ -19,7 +19,7 @@ This repository contains the full source code and documentation for the first sp
 *The following diagrams are located in the `docs/diagrams` directory:*
 - [**Use Case Diagram**](./docs/diagrams/use-case.png)
 - [**Sequence Diagram**](./docs/diagrams/sequence.png)
-- [**Architecture Diagram**](./docs/diagrams/architecture.png)
+- [**Architecture Diagram**](./docs/diagrams/architectureDiagram.png)
 - [**ER / Schema Diagram**](./docs/diagrams/er.jpeg)
 
 ---
