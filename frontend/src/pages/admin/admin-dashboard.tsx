@@ -47,13 +47,14 @@ export default function AdminDashboard() {
                     api.get('/admin/health')
                 ]);
 
-                const users = userRes.data;
-                const pending = users.filter((u: User) => u.status === 'pending' && (u.taxId || u.documentUrl));
-                const donors = users.filter((u: User) => u.role === 'donor' && u.status === 'active');
-                const ngos = users.filter((u: User) => u.role === 'ngo' && u.status === 'active');
+                const users = userRes.data || [];
+                const validUsers = users.filter((u: User) => u !== null);
+                const pending = validUsers.filter((u: User) => u.status === 'pending' && (u.taxId || u.documentUrl));
+                const donors = validUsers.filter((u: User) => u.role === 'donor' && u.status === 'active');
+                const ngos = validUsers.filter((u: User) => u.role === 'ngo' && u.status === 'active');
 
                 setStats({
-                    totalUsers: users.length,
+                    totalUsers: validUsers.length,
                     pendingApprovals: pending.length,
                     activeDonors: donors.length,
                     activeNgos: ngos.length,
@@ -63,7 +64,7 @@ export default function AdminDashboard() {
                     totalCo2: impactRes.data.summary.totalCo2,
                     monthlyData: adminRes.monthlyData
                 });
-                setRecentUsers(users.slice(0, 5));
+                setRecentUsers(validUsers.slice(0, 5));
                 setConfig(configRes.data);
                 setHealth(healthRes.data);
             } catch (error) {
@@ -181,7 +182,7 @@ export default function AdminDashboard() {
                         <p className="text-xs text-muted-foreground font-medium mt-1">latest profile activations</p>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {recentUsers.map(user => (
+                        {recentUsers.map(user => user && (
                             <div key={user.id} className="group p-3 rounded-xl border border-transparent hover:border-border/50 hover:bg-muted/30 transition-all flex items-center gap-3">
                                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                                     {user.avatar ? <img src={user.avatar} className="h-full w-full rounded-lg object-cover" /> : <UserCircle size={20} className="text-primary" />}

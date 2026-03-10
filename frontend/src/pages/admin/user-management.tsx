@@ -122,11 +122,12 @@ export default function UserManagement() {
         }
     };
 
-    const filteredUsers = users.filter(user => {
+    const filteredUsers = (users || []).filter(user => {
+        if (!user) return false;
         if (user.role === 'admin') return false;
-        const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.organization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (user.organization || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (user.email || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesRole = filterRole === 'all' || user.role === filterRole;
         return matchesSearch && matchesRole;
     });

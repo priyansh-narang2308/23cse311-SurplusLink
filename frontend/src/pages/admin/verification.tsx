@@ -23,9 +23,17 @@ interface PendingUser {
 export default function VerificationPage() {
     const [users, setUsers] = useState<PendingUser[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState<string>('');
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [remarks, setRemarks] = useState<{ [key: string]: string }>({});
     const { toast } = useToast();
+
+    const filteredUsers = (users || []).filter(user =>
+        user && (
+            (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (user.organization || '').toLowerCase().includes(searchTerm.toLowerCase())
+        )
+    );
 
     const fetchPendingUsers = useCallback(async () => {
         try {
@@ -94,7 +102,7 @@ export default function VerificationPage() {
             ) : (
                 <div className="grid gap-6">
                     <AnimatePresence>
-                        {users.map(user => (
+                        {filteredUsers.map(user => (
                             <motion.div
                                 key={user.id}
                                 layout

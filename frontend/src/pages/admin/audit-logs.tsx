@@ -64,7 +64,7 @@ export default function AuditLogsPage() {
 
     const filteredLogs = logs.filter(log =>
         log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.userId.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (log.userId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
         log.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -128,9 +128,9 @@ export default function AuditLogsPage() {
                                             <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                                                 <UserIcon size={14} className="text-primary" />
                                             </div>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-bold truncate">{log.userId.name}</p>
-                                                <p className="text-[10px] text-muted-foreground uppercase font-black">{log.userId.role}</p>
+                                             <div className="min-w-0">
+                                                <p className="text-sm font-bold truncate">{log.userId?.name || 'Unknown User'}</p>
+                                                <p className="text-[10px] text-muted-foreground uppercase font-black">{log.userId?.role || 'Deleted'}</p>
                                             </div>
                                         </div>
                                     </TableCell>
