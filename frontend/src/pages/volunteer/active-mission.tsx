@@ -154,7 +154,7 @@ export default function ActiveMission() {
             }
         };
 
-        const interval = setInterval(updateLocation, 30000);
+        const interval = setInterval(updateLocation, 60000); // 60s Heartbeat
         updateLocation(); // Initial update
 
         return () => clearInterval(interval);

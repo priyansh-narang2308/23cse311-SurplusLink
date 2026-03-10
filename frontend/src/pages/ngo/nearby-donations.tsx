@@ -71,7 +71,7 @@ export function NearbyDonationsPage() {
 
     useEffect(() => {
         loadFeed();
-        const interval = setInterval(() => loadFeed(true), 15000); // 15s Live Feed
+        const interval = setInterval(() => loadFeed(true), 60000); // 60s Live Feed
         return () => clearInterval(interval);
     }, [loadFeed]);
 

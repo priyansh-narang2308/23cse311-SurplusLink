@@ -68,7 +68,7 @@ export default function UserManagement() {
     // Real-time polling (every 10 seconds for user list)
     useEffect(() => {
         fetchUsers();
-        const interval = setInterval(fetchUsers, 10000);
+        const interval = setInterval(fetchUsers, 60000); // 60s poll
         return () => clearInterval(interval);
     }, []);
 

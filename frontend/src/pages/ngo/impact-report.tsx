@@ -73,7 +73,7 @@ export default function NgoImpactReport() {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(() => fetchData(true), 30000);
+        const interval = setInterval(() => fetchData(true), 60000); // 60s poll
         return () => clearInterval(interval);
     }, [fetchData]);
 

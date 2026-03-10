@@ -141,7 +141,7 @@ export function AppSidebar({ role }: { role: UserRole }) {
 
     React.useEffect(() => {
         fetchPending();
-        const interval = setInterval(fetchPending, 15000);
+        const interval = setInterval(fetchPending, 60000); // Increased to 60s
         return () => clearInterval(interval);
     }, [role, fetchPending]);
 

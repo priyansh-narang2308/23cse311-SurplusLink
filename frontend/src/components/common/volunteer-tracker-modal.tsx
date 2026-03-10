@@ -71,7 +71,7 @@ export function VolunteerTrackerModal({ isOpen, onClose, donation: initialDonati
         setDonation(initialDonation);
         if (isOpen && initialDonation) {
             refreshData();
-            const interval = setInterval(refreshData, 10000); // Poll every 10s
+            const interval = setInterval(refreshData, 60000); // Poll every 60s
             return () => clearInterval(interval);
         }
     }, [isOpen, initialDonation, refreshData]);

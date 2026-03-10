@@ -74,7 +74,7 @@ export default function NgoFleetDashboard() {
 
     useEffect(() => {
         fetchVolunteers();
-        const interval = setInterval(fetchVolunteers, 30000); // Poll every 30s
+        const interval = setInterval(fetchVolunteers, 60000); // Poll every 60s
         return () => clearInterval(interval);
     }, [fetchVolunteers]);
 
