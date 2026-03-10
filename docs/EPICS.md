@@ -1,6 +1,84 @@
-# SurplusLink: Epics 6 through 9 - Feature Documentation & Architecture Changelog
+# SurplusLink: Comprehensive System Epics (1-9) - Feature Documentation
 
-This document provides a comprehensive breakdown of the advanced features, system architecture upgrades, and robust testing implementations delivered during **Epics 6, 7, 8, and 9**.
+This document provides a detailed breakdown of all system features, architecture updates, and functional modules implemented across the SurplusLink platform.
+
+---
+
+## Epic 1: Identity, Authentication & Profile Management
+**Focus**: *Secure multi-role onboarding and unified access control.*
+
+### Core Features Implemented:
+1.  **Unified Multi-Role Registration** (`frontend/src/pages/login-page.tsx`):
+    *   Dynamic onboarding flow that collects role-specific details for Donors, NGOs, and Volunteers.
+    *   Secure document upload integration for verification (Permits, IDs).
+2.  **Secure Passwordless & Social Login**:
+    *   Integrated OTP-based authentication and Google Social Login support.
+    *   Handled via `auth.controller.js` with secure JWT session tokens.
+3.  **Role-Based Access Control (RBAC)**:
+    *   Robust middleware to restrict access to sensitive routes and API endpoints.
+    *   Automated dashboard redirection based on authenticated user role.
+
+---
+
+## Epic 2: Donor Surplus Food Management
+**Focus**: *Streamlined donation lifecycle with safety-first validation.*
+
+### Core Features Implemented:
+1.  **Safety-Aware Donation Workflow** (`frontend/src/pages/donor/`):
+    *   Mandatory safety window validation to ensure food is consumed before spoiling.
+    *   Logic: `((expiry_time − current_time) ≥ required_safety_window)`.
+2.  **Dynamic Pickup Scheduling**:
+    *   Donors can schedule pickups in advance, allowing NGOs and Volunteers to plan logistics efficiently.
+3.  **Dietary & Allergen Cataloging**:
+    *   Support for dietary tags (Veg, Non-Veg, Halal) and allergen metadata to prevent unsafe distribution.
+4.  **Donor Impact Analytics**:
+    *   Dashboard view showing donation history, acceptance rates, and personal community impact.
+
+---
+
+## Epic 3: NGO Food Request & Acceptance Management
+**Focus**: *Intake optimization, capacity management, and safety compliance.*
+
+### Core Features Implemented:
+1.  **Intelligent Capacity Modeling** (`frontend/src/pages/ngo/ngo-dashboard.tsx`):
+    *   Configurable daily intake limits and storage types (Cold, Frozen, Dry).
+2.  **Geo-Location Based Discovery**:
+    *   Real-time map and list views for NGOs to find nearby unassigned donations.
+    *   Filters for food type, expiry time, and proximity.
+3.  **Urgency-Driven Priority Signaling**:
+    *   NGOs can flag "Urgent Demand" to shift system matching priorities toward critical needs.
+4.  **Verified Safety Rejections**:
+    *   Standardized flow for NGOs to reject unsafe donations with mandatory reasoning for audit trails.
+
+---
+
+## Epic 4: Volunteer Availability & Delivery Execution
+**Focus**: *Real-time logistics, task management, and handover accountability.*
+
+### Core Features Implemented:
+1.  **Real-Time Availability Toggle** (`frontend/src/pages/volunteer/volunteer-dashboard.tsx`):
+    *   Online/Offline status management to prevent unwanted task assignments.
+2.  **Context-Aware Task Cards**:
+    *   Provides full route preview, ETA, and cargo details (Quantity, Perishability) before task acceptance.
+3.  **Proof of Delivery (PoD) Module**:
+    *   Mandatory digital documentation (photos or digital signatures) to confirm successful handover.
+4.  **Auto-Recovery & Delay Handling**:
+    *   System-wide monitoring to detect stalled tasks and trigger automatic reassignment timeouts.
+
+---
+
+## Epic 5: Intelligent Matching & Supply Chain Optimization
+**Focus**: *Algorithmic optimization of the donor-to-beneficiary pipeline.*
+
+### Core Features Implemented:
+1.  **Proximity & Need-Based Matching** (`backend/services/matching.service.js`):
+    *   Ranking algorithm that pairs donors with the most suitable/nearest NGOs.
+2.  **Automated Volunteer Dispatch**:
+    *   Intelligent assignment logic considering vehicle capacity and volunteer distance from pickup.
+3.  **Sustainability Metrics Engine**:
+    *   Calculates CO₂ savings and "Meals Saved" count for every successful delivery mission.
+4.  **Load Balancing Logic**:
+    *   Prevents specific NGOs or Volunteers from being overloaded with consecutive tasks.
 
 ---
 
@@ -73,4 +151,4 @@ This document provides a comprehensive breakdown of the advanced features, syste
     *   **Cron Supervisor**: If a mission remains unassigned for too long, or an NGO's daily capacity exceeds 80%, the system triggers load-balancing multipliers to shift volume to other NGOs or boost volunteer incentives.
 
 ---
-*End of Document. All corresponding APIs and Testing Strategies have been updated in `API_REFERENCE.md` and `TESTING_STRATEGY.md`.*
+*End of Document.*
