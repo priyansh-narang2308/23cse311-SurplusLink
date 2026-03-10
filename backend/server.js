@@ -25,20 +25,18 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(globalLimiter); // Apply US 9.1 Global Rate Limiting
-
 const allowedOrigins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5174",
     "https://surpluslink.vercel.app",
+    "https://surpluslink-9fq6.onrender.com",
     process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
             callback(null, true);
@@ -50,6 +48,8 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use(globalLimiter); // Apply US 9.1 Global Rate Limiting
 
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
