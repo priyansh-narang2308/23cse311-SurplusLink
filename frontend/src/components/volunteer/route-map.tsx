@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { GoogleMap, Marker, Polyline, useJsApiLoader } from '@react-google-maps/api';
+import React, { useMemo, useState, useEffect } from 'react';
+import { GoogleMap, Marker, useJsApiLoader, DirectionsRenderer } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_ID } from '@/lib/maps-config';
 import { Loader2 } from 'lucide-react';
 
@@ -35,28 +35,78 @@ export function RouteMap({ donorCoords, ngoCoords, volunteerCoords, diversionCoo
         libraries: GOOGLE_MAPS_LIBRARIES
     });
 
+    const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+
     const center = useMemo(() => {
         if (volunteerCoords) return volunteerCoords;
         if (donorCoords) return donorCoords;
         return { lat: 28.6139, lng: 77.2090 };
     }, [volunteerCoords, donorCoords]);
 
-    const polylinePath = useMemo(() => {
+    useEffect(() => {
+        if (!isLoaded) return;
+
+        // Determine the start point: Volunteer if available, otherwise Donor fallback
+        let origin: { lat: number; lng: number } | null = volunteerCoords || (donorCoords ? donorCoords : null);
+        let destination: { lat: number; lng: number } | null = null;
+        let waypoints: google.maps.DirectionsWaypoint[] = [];
+
+        if (!origin) return;
+
         if (stops && stops.length > 0) {
-            const path = stops.map(s => ({ lat: s.coordinates[1], lng: s.coordinates[0] }));
-            if (volunteerCoords) {
-                return [volunteerCoords, ...path];
+            // Using optimized stops sequence from backend
+            const stopPoints = stops.map(s => ({ lat: s.coordinates[1], lng: s.coordinates[0] }));
+            
+            if (!volunteerCoords) {
+                // If volunteer position is unknown, start from first stop and go to last
+                origin = stopPoints[0];
+                destination = stopPoints[stopPoints.length - 1];
+                waypoints = stopPoints.slice(1, -1).map(p => ({ location: p, stopover: true }));
+            } else {
+                destination = stopPoints[stopPoints.length - 1];
+                waypoints = stopPoints.slice(0, -1).map(p => ({ location: p, stopover: true }));
             }
-            return path;
+        } else if (ngoCoords && donorCoords) {
+            // Basic Mission Logic: Volunteer -> Donor -> NGO
+            if (!volunteerCoords) {
+                origin = donorCoords;
+                destination = ngoCoords;
+                waypoints = diversionCoords ? [{ location: diversionCoords, stopover: true }] : [];
+            } else {
+                destination = ngoCoords;
+                waypoints = [{ location: donorCoords, stopover: true }];
+                if (diversionCoords) waypoints.push({ location: diversionCoords, stopover: true });
+            }
+        } else if (donorCoords && volunteerCoords) {
+            // Single Pickup phase
+            destination = donorCoords;
         }
 
-        const path = [];
-        if (volunteerCoords) path.push(volunteerCoords);
-        if (donorCoords) path.push(donorCoords);
-        if (diversionCoords) path.push(diversionCoords);
-        if (ngoCoords) path.push(ngoCoords);
-        return path;
-    }, [volunteerCoords, donorCoords, ngoCoords, diversionCoords, stops]);
+        // Final check: Don't request if origin and destination are identical
+        if (!destination || (origin.lat === destination.lat && origin.lng === destination.lng)) {
+            setDirections(null);
+            return;
+        }
+
+        const directionsService = new google.maps.DirectionsService();
+        directionsService.route(
+            {
+                origin,
+                destination,
+                waypoints,
+                travelMode: google.maps.TravelMode.DRIVING,
+                optimizeWaypoints: false,
+            },
+            (result, status) => {
+                if (status === google.maps.DirectionsStatus.OK) {
+                    setDirections(result);
+                } else {
+                    console.warn(`Directions request failed: ${status}`);
+                    setDirections(null);
+                }
+            }
+        );
+    }, [isLoaded, volunteerCoords, donorCoords, ngoCoords, diversionCoords, stops]);
 
     if (!isLoaded) {
         return (
@@ -77,6 +127,21 @@ export function RouteMap({ donorCoords, ngoCoords, volunteerCoords, diversionCoo
                 zoomControl: false,
             }}
         >
+            {directions && (
+                <DirectionsRenderer
+                    directions={directions}
+                    options={{
+                        suppressMarkers: true,
+                        preserveViewport: true,
+                        polylineOptions: {
+                            strokeColor: "#22c55e",
+                            strokeOpacity: 0.8,
+                            strokeWeight: 6,
+                        },
+                    }}
+                />
+            )}
+
             {volunteerCoords && (
                 <Marker
                     position={volunteerCoords}
@@ -122,22 +187,6 @@ export function RouteMap({ donorCoords, ngoCoords, volunteerCoords, diversionCoo
                         scaledSize: new google.maps.Size(40, 40)
                     }}
                     label={{ text: "DIVERSION", className: "font-black text-[10px] bg-background/80 px-2 py-1 rounded text-orange-500 translate-y-8" }}
-                />
-            )}
-
-            {polylinePath.length > 1 && (
-                <Polyline
-                    path={polylinePath}
-                    options={{
-                        strokeColor: "#22c55e",
-                        strokeOpacity: 0.8,
-                        strokeWeight: 4,
-                        icons: [{
-                            icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, strokeOpacity: 1, scale: 3 },
-                            offset: "50%",
-                            repeat: "100px"
-                        }]
-                    }}
                 />
             )}
         </GoogleMap>
