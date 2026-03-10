@@ -13,6 +13,7 @@ import RejectionLog from '../models/RejectionLog.model.js';
 import VerificationLog from '../models/VerificationLog.model.js';
 import ViolationLog from '../models/ViolationLog.model.js';
 import AuditLog from '../models/AuditLog.model.js';
+import ImpactRule from '../models/ImpactRule.model.js';
 import mongoose from 'mongoose';
 import { convertToWeight, calculateMeals, calculateCo2Savings } from '../utils/impact.js';
 
@@ -545,13 +546,57 @@ const getImpactSummary = async (req, res, next) => {
                     totalCo2: { $sum: '$totalCo2' },
                     totalWeightKg: { $sum: '$totalWeightKg' },
                     donationsCompleted: { $sum: '$donationsCompleted' },
+                    // Flatten arrays across days to count unique participants
+                    allDonors: { $push: '$donors' },
+                    allNgos: { $push: '$ngos' }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    totalMeals: 1,
+                    totalCo2: 1,
+                    totalWeightKg: 1,
+                    donationsCompleted: 1,
+                    // Use $reduce to flatten the array of arrays
+                    uniqueDonors: {
+                        $size: {
+                            $reduce: {
+                                input: '$allDonors',
+                                initialValue: [],
+                                in: { $setUnion: ['$$value', '$$this'] }
+                            }
+                        }
+                    },
+                    uniqueNgos: {
+                        $size: {
+                            $reduce: {
+                                input: '$allNgos',
+                                initialValue: [],
+                                in: { $setUnion: ['$$value', '$$this'] }
+                            }
+                        }
+                    }
                 }
             }
         ]);
 
+        const rules = await ImpactRule.find({});
+
         res.json({
-            summary: totals[0] || { totalMeals: 0, totalCo2: 0, totalWeightKg: 0, donationsCompleted: 0 },
-            timeline: stats
+            summary: totals[0] || {
+                totalMeals: 0,
+                totalCo2: 0,
+                totalWeightKg: 0,
+                donationsCompleted: 0,
+                uniqueDonors: 0,
+                uniqueNgos: 0
+            },
+            timeline: stats,
+            rules: rules.length > 0 ? rules : [
+                { ruleName: 'meal_conversion', factor: 0.5, unit: 'kg/meal', description: 'Standard FAO/UN definition' },
+                { ruleName: 'co2_conversion', factor: 2.5, unit: 'kg/kg', description: 'Emissions prevented per kg food' }
+            ]
         });
     } catch (error) {
         next(error);

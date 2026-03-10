@@ -1,5 +1,5 @@
 import api from '@/lib/api';
-import { UtilizationRecord, VolunteerPerformanceReport } from '../types';
+import { UtilizationRecord, VolunteerPerformanceReport, ImpactSummary } from '../types';
 
 class ReportService {
     async getNgoUtilization(ngoId?: string, startDate?: string, endDate?: string): Promise<UtilizationRecord> {
@@ -27,6 +27,14 @@ class ReportService {
         if (startDate) params.startDate = startDate;
         if (endDate) params.endDate = endDate;
         const response = await api.get('/reports/safety-compliance', { params });
+        return response.data;
+    }
+
+    async getImpactSummary(startDate?: string, endDate?: string): Promise<ImpactSummary> {
+        const params: Record<string, string> = {};
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+        const response = await api.get('/reports/impact-summary', { params });
         return response.data;
     }
 }

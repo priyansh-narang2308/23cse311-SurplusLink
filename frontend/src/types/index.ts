@@ -279,3 +279,28 @@ export interface SystemHealth {
     status: string;
   };
 }
+
+export interface ImpactSummary {
+  summary: {
+    totalMeals: number;
+    totalCo2: number;
+    totalWeightKg: number;
+    donationsCompleted: number;
+    uniqueDonors: number;
+    uniqueNgos: number;
+  };
+  timeline: {
+    date: string;
+    totalMeals: number;
+    totalCo2: number;
+    donationsCompleted: number;
+    totalWeightKg: number;
+  }[];
+  rules: {
+    ruleName: string;
+    factor: number;
+    unit: string;
+    description?: string;
+  }[];
+}
+

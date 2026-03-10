@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/donations', protect, roleBasedAccess(['admin', 'donor']), getDonationReport);
 router.get('/ngo-utilization', protect, roleBasedAccess(['admin', 'ngo']), getNgoUtilizationReport);
 router.get('/volunteer-performance', protect, roleBasedAccess(['admin']), getVolunteerPerformanceReport);
-router.get('/impact-summary', protect, roleBasedAccess(['admin']), getImpactSummary);
+router.get('/impact-summary', protect, roleBasedAccess(['admin', 'donor', 'ngo']), getImpactSummary);
 router.get('/safety-compliance', protect, roleBasedAccess(['admin']), getSafetyComplianceReport);
 
 export default router;
