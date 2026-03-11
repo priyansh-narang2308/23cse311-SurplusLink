@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, Languages, Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -80,26 +81,29 @@ export function LanguageSelector() {
             {/* Hidden container for Google Translate to inject its default widget */}
             <div id="google_translate_element" className="hidden" />
 
-            <AnimatePresence>
-                {isTranslating && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-background/20 backdrop-blur-md z-[9999] flex items-center justify-center pointer-events-none"
-                    >
-                        <div className="bg-card p-8 rounded-[2.5rem] shadow-glow border border-primary/20 flex flex-col items-center gap-6 animate-scale-in">
-                            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {isTranslating && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-background/20 backdrop-blur-md z-[9999] flex items-center justify-center pointer-events-none"
+                        >
+                            <div className="bg-card p-8 rounded-[2.5rem] shadow-glow border border-primary/20 flex flex-col items-center gap-6 animate-scale-in">
+                                <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                </div>
+                                <div className="text-center space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Switching Language</p>
+                                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Updating your workspace experience</p>
+                                </div>
                             </div>
-                            <div className="text-center space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Switching Language</p>
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Updating your workspace experience</p>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
 
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
