@@ -7,6 +7,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
   role: UserRole | null;
+  token: string | null;
 }
 
 export const getAuthState = (): AuthState => {
@@ -18,7 +19,7 @@ export const getAuthState = (): AuthState => {
   } catch (e) {
     console.error('Failed to parse auth state');
   }
-  return { isAuthenticated: false, user: null, role: null };
+  return { isAuthenticated: false, user: null, role: null, token: null };
 };
 
 export const setAuthData = (user: User) => {
@@ -26,6 +27,7 @@ export const setAuthData = (user: User) => {
     isAuthenticated: true,
     user,
     role: user.role as UserRole,
+    token: (user as any).token || null,
   };
   localStorage.setItem(AUTH_KEY, JSON.stringify(authState));
   return authState;
@@ -42,5 +44,5 @@ export const isAuthorized = (requiredRole: UserRole): boolean => {
 
 export const getProfile = async (): Promise<User> => {
   const response = await api.get('/users/profile');
-  return response.data; 
+  return response.data;
 };

@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Use 10.0.2.2 for Android Emulator to access localhost
-  static const String baseUrl = 'http://10.0.2.2:8000/api/v1';
+  // Production Render URL
+  static const String baseUrl = 'https://surpluslink-9fq6.onrender.com/api/v1';
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
@@ -16,7 +16,7 @@ class ApiService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        return data; 
+        return data;
       } else {
         throw Exception('Login failed: ${response.body}');
       }

@@ -30,6 +30,8 @@ const allowedOrigins = [
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5174",
+    "http://10.0.2.2:5173",
+    "http://10.0.2.2:5174",
     "https://surpluslink.vercel.app",
     "https://surpluslink-9fq6.onrender.com",
     process.env.FRONTEND_URL,

@@ -1,13 +1,24 @@
 import axios from 'axios';
 import { queueAction, getCachedData, cacheData } from './offline-storage';
 import { toast } from '@/hooks/use-toast';
+import { getAuthState } from '@/utils/auth';
+
+const getBaseURL = () => {
+  return import.meta.env.VITE_API_BASE_URL || "https://surpluslink-9fq6.onrender.com/api/v1";
+};
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "https://surpluslink-9fq6.onrender.com/api/v1",
+  baseURL: getBaseURL(),
   withCredentials: true,
 });
 
 api.interceptors.request.use(async (config) => {
+  // Add Authorization header
+  const { token } = getAuthState();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   if (!navigator.onLine && (config.method !== 'get')) {
     const syncKey = `${config.method}-${config.url}-${Date.now()}`;
     let type = 'UPDATE_STATUS';

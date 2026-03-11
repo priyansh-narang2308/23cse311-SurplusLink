@@ -39,7 +39,7 @@ const signupUser = async (req, res, next) => {
         }
 
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
-        const otpExpires = Date.now() + 10 * 60 * 1000; 
+        const otpExpires = Date.now() + 10 * 60 * 1000;
 
         const user = await User.create({
             name,
@@ -106,7 +106,8 @@ const signupUser = async (req, res, next) => {
                 message: 'Registration successfull! Please verify your email.',
                 requiresOtp: true,
                 email: user.email,
-                devOtp: otp
+                devOtp: otp,
+                token: generateToken(user._id, user.role)
             });
         } else {
             res.status(400);
@@ -138,8 +139,8 @@ const loginUser = async (req, res, next) => {
 
             res.cookie('token', token, {
                 httpOnly: true,
-                secure: true, 
-                sameSite: 'none', 
+                secure: true,
+                sameSite: 'none',
                 maxAge: 30 * 24 * 60 * 60 * 1000
             });
 
@@ -154,6 +155,7 @@ const loginUser = async (req, res, next) => {
                 createdAt: user.createdAt,
                 isOnline: user.isOnline,
                 volunteerProfile: user.volunteerProfile,
+                token: token
             });
         } else {
             res.status(401);
@@ -310,6 +312,7 @@ const verifyOTP = async (req, res, next) => {
             createdAt: user.createdAt,
             isOnline: user.isOnline,
             volunteerProfile: user.volunteerProfile,
+            token: token
         });
 
     } catch (error) {
@@ -333,7 +336,7 @@ async function forgotPassword(req, res, next) {
 
         const resetToken = crypto.randomBytes(20).toString('hex');
         user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-        user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; 
+        user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
 
         await user.save();
 
