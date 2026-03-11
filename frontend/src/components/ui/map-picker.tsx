@@ -66,11 +66,14 @@ export function MapPicker({ initialCenter, onLocationSelect }: MapPickerProps) {
         }
     }, [map, onLocationSelect]);
 
+    const hasFetchedRef = React.useRef(false);
+
     useEffect(() => {
         if (initialCenter) {
             setMarkerPos(initialCenter);
-        } else if (navigator.geolocation && !isLocating) {
-            // Auto-locate if no initial center is provided (run once)
+        } else if (navigator.geolocation && !hasFetchedRef.current) {
+            // Auto-locate only once on mount — ref prevents re-triggering
+            hasFetchedRef.current = true;
             setIsLocating(true);
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -80,17 +83,17 @@ export function MapPicker({ initialCenter, onLocationSelect }: MapPickerProps) {
                     };
                     setMarkerPos(newPos);
                     map?.panTo(newPos);
-                    // Do NOT call onLocationSelect here as it triggers parent re-renders and toasts
                     setIsLocating(false);
                 },
                 (error) => {
                     console.error("Error fetching location:", error);
                     setIsLocating(false);
                 },
-                { enableHighAccuracy: true }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
             );
         }
-    }, [initialCenter, map, isLocating]); // Removed fetchCurrentLocation from dependencies
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialCenter, map]);
 
     const onAutocompleteLoad = useCallback((autocompleteInstance: google.maps.places.Autocomplete) => {
         setAutocomplete(autocompleteInstance);

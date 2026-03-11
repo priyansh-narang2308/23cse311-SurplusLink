@@ -27,7 +27,7 @@ export const setAuthData = (user: User) => {
     isAuthenticated: true,
     user,
     role: user.role as UserRole,
-    token: (user as any).token || null,
+    token: (user as User & { token?: string }).token ?? null,
   };
   localStorage.setItem(AUTH_KEY, JSON.stringify(authState));
   return authState;
