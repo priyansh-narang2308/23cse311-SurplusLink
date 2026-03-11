@@ -66,7 +66,7 @@ NGOs are the beneficiaries who redistribute the food to those in need.
 - Specify your **Storage Types** (Cold, Frozen, Dry) so the system only matches you with suitable food.
 
 ### 3. Claiming & Verification
-- **Claim**: Click "Claim" on a donation card to initiate the pickup process.
+- **Claim**: Click "Claim Donation" to reserve the donation and trigger volunteer assignment.
 - **Rejection**: If a donation arrives and is found to be unsafe or of poor quality, use the "Reject" button with a mandatory reason. This helps us maintain system-wide safety standards.
 
 ---
@@ -83,7 +83,7 @@ Volunteers are the vital link that moves food from Donors to NGOs.
     - **Route Preview**: Map view of pickup and drop-off points.
     - **ETA**: Estimated time for the entire delivery.
     - **Cargo Details**: What is being transported and any special handling rules.
-- Click **"Accept Mission"** to lock the task to yourself.
+- Clicking **Accept Mission** assigns the delivery exclusively to the volunteer and prevents duplicate claims.
 
 ### 3. Delivery Execution (On-Field)
 - **Confirm Pickup**: Once you arrive at the Donor's location and receive the food, click "Confirm Pickup." You will be asked to upload a photo of the food at handover.
@@ -100,7 +100,7 @@ Admins oversee the entire ecosystem to ensure safety, fairness, and efficiency.
 
 ### 1. User Verification (KYC Hub)
 - Review pending NGO and Volunteer applications.
-- Examine uploaded documents and vehicle specs before clicking **Approve** or **Reject**.
+- Review uploaded documents and approve or reject user verification requests.
 
 ### 2. Live Logistics Monitoring
 - View the **Active Missions** dashboard to see all deliveries happening in real-time.
