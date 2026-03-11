@@ -40,15 +40,15 @@ This matrix identifies how each architectural tier is tested and the specific pr
 
 ## 3. Properties Verified per Component
 
-### **1. 🔐 Security & Access Control**
+### **1. Security & Access Control**
 *   **Frontend/Mobile**: Verification that users cannot navigate to unauthorized screens (e.g., Volunteer accessing Admin Analytics).
 *   **Backend**: Ensuring all restricted endpoints require a valid, non-expired JWT.
 
-### **2. 📍 Reliability (Geospatial & Timing)**
+### **2. Reliability (Geospatial & Timing)**
 *   **Backend**: Accuracy of the matching algorithm within a 15km precision.
 *   **System**: Verification that the **Cron Supervisor** correctly unassigns "stalled" missions every 15 minutes.
 
-### **3. ✅ Transactional Integrity (Correctness)**
+### **3. Transactional Integrity (Correctness)**
 *   **Backend**: Atomic mission claiming using MongoDB's unique indexing and conditional updates to prevent data corruption.
 *   **Mobile**: Verification that location updates are correctly transmitted to the backend at specified intervals.
 
