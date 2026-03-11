@@ -1,0 +1,229 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications (F8)":
+      - list
+    - generic [ref=e4]:
+      - generic [ref=e8]:
+        - list [ref=e10]:
+          - listitem [ref=e11]:
+            - link "SurplusLink" [ref=e12] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e13]:
+                - img [ref=e15]
+                - generic [ref=e17]: SurplusLink
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - generic [ref=e20]: Platform
+            - list [ref=e22]:
+              - listitem [ref=e23]:
+                - link "Dashboard" [ref=e24] [cursor=pointer]:
+                  - /url: /donor
+                  - img [ref=e25]
+                  - generic [ref=e28]: Dashboard
+              - listitem [ref=e29]:
+                - link "Post Donation" [ref=e30] [cursor=pointer]:
+                  - /url: /donor/post
+                  - img [ref=e31]
+                  - generic [ref=e33]: Post Donation
+              - listitem [ref=e34]:
+                - link "My Donations" [ref=e35] [cursor=pointer]:
+                  - /url: /donor/donations
+                  - img [ref=e36]
+                  - generic [ref=e37]: My Donations
+              - listitem [ref=e38]:
+                - link "Notifications 3" [ref=e39] [cursor=pointer]:
+                  - /url: /donor/notifications
+                  - img [ref=e40]
+                  - generic [ref=e43]: Notifications
+                  - generic [ref=e44]: "3"
+              - listitem [ref=e45]:
+                - link "Reports" [ref=e46] [cursor=pointer]:
+                  - /url: /donor/reports
+                  - img [ref=e47]
+                  - generic [ref=e50]: Reports
+              - listitem [ref=e51]:
+                - link "Impact Summary" [ref=e52] [cursor=pointer]:
+                  - /url: /donor/impact
+                  - img [ref=e53]
+                  - generic [ref=e55]: Impact Summary
+              - listitem [ref=e56]:
+                - link "Location Settings" [ref=e57] [cursor=pointer]:
+                  - /url: /donor/settings
+                  - img [ref=e58]
+                  - generic [ref=e61]: Location Settings
+          - generic [ref=e64]:
+            - paragraph [ref=e65]:
+              - img [ref=e66]
+              - text: Pro Tip
+            - paragraph [ref=e68]: Post donations early for faster pickup matches.
+        - list [ref=e70]:
+          - listitem [ref=e71]:
+            - button "TE E2E Testing Bakery donor" [ref=e72] [cursor=pointer]:
+              - generic [ref=e74]: TE
+              - generic [ref=e75]:
+                - generic [ref=e76]: E2E Testing Bakery
+                - generic [ref=e77]: donor
+              - img [ref=e78]
+        - button "Toggle Sidebar" [ref=e81]
+      - main [ref=e82]:
+        - generic [ref=e83]:
+          - button "Toggle Sidebar" [ref=e85] [cursor=pointer]:
+            - img
+            - generic [ref=e86]: Toggle Sidebar
+          - generic [ref=e87]:
+            - combobox [ref=e89] [cursor=pointer]:
+              - img
+              - generic [ref=e90]: English
+              - img
+            - button [ref=e91] [cursor=pointer]:
+              - img
+            - heading "donor workspace" [level=1] [ref=e92]
+        - main [ref=e93]:
+          - generic [ref=e95]:
+            - generic [ref=e96]:
+              - generic [ref=e97]:
+                - heading "Welcome back, Test!" [level=1] [ref=e98]
+                - paragraph [ref=e99]: Manage your food donations and track your impact.
+              - link "Post Donation" [ref=e102] [cursor=pointer]:
+                - /url: /donor/post
+                - img
+                - text: Post Donation
+            - generic [ref=e103]:
+              - generic [ref=e105]:
+                - generic [ref=e106]:
+                  - paragraph [ref=e107]: Total Donations
+                  - paragraph [ref=e109]: "3"
+                - img [ref=e111]
+              - generic [ref=e117]:
+                - generic [ref=e118]:
+                  - paragraph [ref=e119]: Completed
+                  - paragraph [ref=e121]: "0"
+                - img [ref=e123]
+              - generic [ref=e128]:
+                - generic [ref=e129]:
+                  - paragraph [ref=e130]: Acceptance Rate
+                  - paragraph [ref=e132]: 0%
+                - img [ref=e134]
+              - generic [ref=e139]:
+                - generic [ref=e140]:
+                  - paragraph [ref=e141]: Avg. Pickup Time
+                  - paragraph [ref=e143]: "--"
+                  - paragraph [ref=e144]: Live tracking incoming
+                - img [ref=e146]
+            - generic [ref=e150]:
+              - generic [ref=e151]:
+                - heading "Impact Visualization" [level=3] [ref=e153]:
+                  - img [ref=e154]
+                  - text: Impact Visualization
+                - img [ref=e161]:
+                  - generic [ref=e165]:
+                    - generic [ref=e167]: Oct
+                    - generic [ref=e169]: Nov
+                    - generic [ref=e171]: Dec
+                    - generic [ref=e173]: Jan
+                    - generic [ref=e175]: Feb
+                    - generic [ref=e177]: Mar
+                  - generic [ref=e179]:
+                    - generic [ref=e181]: "0"
+                    - generic [ref=e183]: "1"
+                    - generic [ref=e185]: "2"
+                    - generic [ref=e187]: "3"
+                    - generic [ref=e189]: "4"
+              - generic [ref=e190]:
+                - generic [ref=e191]:
+                  - heading "Recent Activity" [level=3] [ref=e192]
+                  - link "View History" [ref=e193] [cursor=pointer]:
+                    - /url: /donor/donations
+                - generic [ref=e194]:
+                  - generic [ref=e195]:
+                    - generic [ref=e197]:
+                      - generic [ref=e198]:
+                        - heading "Fresh Apples" [level=3] [ref=e199]
+                        - paragraph [ref=e200]: Unknown Donor
+                      - generic [ref=e201]: Pending
+                    - generic [ref=e202]:
+                      - generic [ref=e203]:
+                        - generic [ref=e204]:
+                          - img [ref=e205]
+                          - generic [ref=e209]: 10kg
+                        - generic [ref=e210]:
+                          - img [ref=e211]
+                          - generic [ref=e214]: 123 Test Street, Bangalore
+                        - generic [ref=e215]:
+                          - img [ref=e216]
+                          - generic [ref=e218]: 09:00 AM - 06:00 PM
+                        - generic [ref=e219]:
+                          - img [ref=e220]
+                          - generic [ref=e223]: 10h 31m
+                      - generic [ref=e224]:
+                        - generic [ref=e225]: 🥬 raw
+                        - generic [ref=e226]:
+                          - text: 🍞
+                          - generic [ref=e227]: dry
+                        - generic [ref=e228]:
+                          - img [ref=e229]
+                          - text: "AI:"
+                    - button "Cancel" [ref=e232] [cursor=pointer]
+                  - generic [ref=e233]:
+                    - generic [ref=e235]:
+                      - generic [ref=e236]:
+                        - heading "Fresh Apples" [level=3] [ref=e237]
+                        - paragraph [ref=e238]: Unknown Donor
+                      - generic [ref=e239]: Pending
+                    - generic [ref=e240]:
+                      - generic [ref=e241]:
+                        - generic [ref=e242]:
+                          - img [ref=e243]
+                          - generic [ref=e247]: 10kg
+                        - generic [ref=e248]:
+                          - img [ref=e249]
+                          - generic [ref=e252]: 123 Test Street, Bangalore
+                        - generic [ref=e253]:
+                          - img [ref=e254]
+                          - generic [ref=e256]: 09:00 AM - 06:00 PM
+                        - generic [ref=e257]:
+                          - img [ref=e258]
+                          - generic [ref=e261]: 10h 31m
+                      - generic [ref=e262]:
+                        - generic [ref=e263]: 🥬 raw
+                        - generic [ref=e264]:
+                          - text: 🍞
+                          - generic [ref=e265]: dry
+                        - generic [ref=e266]:
+                          - img [ref=e267]
+                          - text: "AI:"
+                    - button "Cancel" [ref=e270] [cursor=pointer]
+                  - generic [ref=e271]:
+                    - generic [ref=e273]:
+                      - generic [ref=e274]:
+                        - heading "Fresh Apples" [level=3] [ref=e275]
+                        - paragraph [ref=e276]: Unknown Donor
+                      - generic [ref=e277]: Claimed
+                    - generic [ref=e278]:
+                      - generic [ref=e279]:
+                        - generic [ref=e280]:
+                          - img [ref=e281]
+                          - generic [ref=e285]: 10kg
+                        - generic [ref=e286]:
+                          - img [ref=e287]
+                          - generic [ref=e290]: 123 Test Street, Bangalore
+                        - generic [ref=e291]:
+                          - img [ref=e292]
+                          - generic [ref=e294]: 09:00 AM - 06:00 PM
+                        - generic [ref=e295]:
+                          - img [ref=e296]
+                          - generic [ref=e299]: 10h 31m
+                      - generic [ref=e300]:
+                        - generic [ref=e301]: 🥬 raw
+                        - generic [ref=e302]:
+                          - text: 🍞
+                          - generic [ref=e303]: dry
+                        - generic [ref=e304]:
+                          - img [ref=e305]
+                          - text: "AI:"
+  - img [ref=e310]
+  - generic [ref=e312]: "0"
+```
