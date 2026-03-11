@@ -18,10 +18,10 @@ The following table identifies each component, its source code repository, deplo
 
 | Component | Source Code Repository | Deployment Location | Pre-Deployment Checks | Tools & Libraries |
 | :--- | :--- | :--- | :--- | :--- |
-| **Frontend Dashboard** | [SurplusLink-Frontend](https://github.com/23cse311-Surpluslink/Frontend) | **Vercel** (`https://surpluslink.vercel.app`) | ESLint, TS Compiler, Vitest Unit Tests | React, Vite, Framer Motion, Axios, IndexedDB (PWA) |
-| **API Backend** | [SurplusLink-Backend](https://github.com/23cse311-Surpluslink/Backend) | **Render** (`https://surpluslink-9fq6.onrender.com`) | Supertest Integration, Vitest, npm audit | Node.js, Express, Mongoose, JWT, Nodemailer |
-| **Message Broker** | Managed via Backend | **CloudAMQP (RabbitMQ)** | Connection Resilience, Fallback Testing | amqplib, Async Queues |
-| **Volunteer Mobile App** | [SurplusLink-Mobile](https://github.com/23cse311-Surpluslink/Mobile) | **App Store / Play Store** | Flutter Analyze, Flutter Test, Widget Testing | Flutter, Dart, Riverpod, Google Maps API |
+| **Frontend Dashboard** | [SurplusLink-Frontend](https://github.com/23cse311-Surpluslink) | **Vercel** (`https://surpluslink.vercel.app`) | ESLint, TS Compiler, Vitest Unit Tests | React, Vite, Framer Motion, Axios, IndexedDB (PWA) |
+| **API Backend** | [SurplusLink-Backend](https://github.com/23cse311-Surpluslink) | **Render** (`https://surpluslink-api.render.com`) | Supertest Integration, Vitest, npm audit | Node.js, Express, Mongoose, JWT, Nodemailer |
+| **Message Broker** | Managed via Backend | **CloudAMQP (RabbitMQ)** | Connection Resilience, Fallback Testing | amqplib, Async Queues, Sync Fallback |
+| **Volunteer Mobile App** | [SurplusLink-Mobile](https://github.com/23cse311-Surpluslink) | **App Store / Play Store** | Flutter Analyze, Flutter Test, Widget Testing | Flutter, Dart, Riverpod, Google Maps API |
 | **Database Cluster** | Managed via Backend | **MongoDB Atlas (AWS)** | Schema Validation, IP Whitelisting | Mongoose, GeoJSON, 2dsphere indexing |
 
 ---
@@ -60,7 +60,7 @@ Our automated architecture ensures that every push to the **Monorepo** or the **
 - **SSL/TLS**: Mandatory HTTPS (TLS 1.3) for all communication.
 - **CORS Policy**: Restrictive origin-locking allowing only the production frontend to communicate with the API.
 - **Secret Management**: API Keys, Database Connection URIs, and Cloudinary secrets are injected at runtime via encrypted environment variables (Github Secrets -> Render/Vercel Env).
-- **Watchdog Services (Cron)**: Backend task workers run every 15 minutes to scan for stalled rescue missions and stale donation data.
+- **Watchdog Services (Cron)**: Backend task workers run every 15 minutes (US 9.1 supervisor) to scan for stalled rescue missions, reset stale availability status, and notify admins of critical resource thresholds (NGO capacity > 80%).
 
 --- 
-*Last Updated: February 10, 2026*
+*Last Updated: March 11, 2026*
