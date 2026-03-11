@@ -22,6 +22,9 @@ SurplusLink is a hyper-local food rescue ecosystem designed to eliminate food wa
 | **Files** | Cloudinary | Secure storage for POD (Proof of Delivery) images. |
 | **Auth** | JWT + HttpOnly Cookies | Secure cross-site session management. |
 | **Maps** | Google Maps API | Route optimization and geocoding. |
+| **Messaging** | RabbitMQ | Asynchronous notifications with sync fallback. |
+| **Offline** | IndexedDB (PWA) | Local caching and action queuing for resilience. |
+| **DevOps** | GitHub Actions + Docker | CI/CD pipeline and deployment automation. |
 
 ---
 
@@ -50,8 +53,8 @@ SurplusLink is a hyper-local food rescue ecosystem designed to eliminate food wa
 
 ## 3. API Endpoints (Comprehensive)
 
-> **Note**: For detailed request/response payloads and error codes, please refer to the [**Detailed API Reference**](./backend/docs/API_REFERENCE.md).
-> **Note**: For a complete list of advanced features developed during Epics 6 through 9 (Admin Hub, Routing, Offline Support, Reports), please see [**Epics 6-9 Changelog**](./docs/EPICS_6_TO_9_CHANGELOG.md).
+> **Note**: For detailed request/response payloads and error codes, please refer to the [**Detailed API Reference**](./docs/API_REFERENCE.md).
+> **Note**: For a complete list of advanced features developed during Epics 1 through 9 (Admin Hub, Routing, Offline Support, Reports), please see [**System Epics Documentation**](./docs/EPICS.md).
 
 ### **A. Authentication (`/api/v1/auth`)**
 | Path | Method | Access | Function |
@@ -83,25 +86,25 @@ SurplusLink is a hyper-local food rescue ecosystem designed to eliminate food wa
 | `/:id/reject` | PATCH | NGO | Reject donation (Safety Audit logging). |
 | `/ngo/volunteers` | GET | NGO | View associated/nearby volunteers. |
 
-### **D. Volunteer Module (`/api/v1/donations`)**
+### **D. Volunteer Module**
 | Path | Method | Access | Function |
 | :--- | :--- | :--- | :--- |
-| `/available-missions`| GET | Volunteer | Real-time map/list of pickup tasks. |
-| `/active-mission` | GET | Volunteer | Details of the current task. |
-| `/:id/accept-mission`| PATCH | Volunteer | Lock mission to self (Equity logic). |
-| `/:id/pickup` | PATCH | Volunteer | Confirm pickup + Photo verification. |
-| `/:id/deliver` | PATCH | Volunteer | Confirm delivery + NGO signature. |
-| `/volunteer/location` | PATCH | Volunteer | Real-time background GPS heartbeat. |
-| `/:id/optimized-route` | GET | Volunteer | Google Maps Directions API pathing. |
+| `/api/v1/donations/available-missions`| GET | Volunteer | Real-time map/list of pickup tasks. |
+| `/api/v1/donations/active-mission` | GET | Volunteer | Details of the current task. |
+| `/api/v1/donations/:id/accept-mission`| PATCH | Volunteer | Lock mission to self (Atomic lock). |
+| `/api/v1/donations/:id/pickup` | PATCH | Volunteer | Confirm pickup + Photo verification. |
+| `/api/v1/donations/:id/deliver` | PATCH | Volunteer | Confirm delivery + NGO signature. |
+| `/api/v1/users/volunteer/location` | PATCH | Volunteer | Real-time background GPS heartbeat. |
+| `/api/v1/donations/:id/optimized-route` | GET | Volunteer | Dijkstra-based pathing optimization. |
 
-### **E. Admin Module (`/api/v1/users` & `/api/v1/reports`)**
+### **E. Admin & Governance**
 | Path | Method | Access | Function |
 | :--- | :--- | :--- | :--- |
-| `/admin/users` | GET | Admin | Full User Management Dashboard. |
-| `/verify` | PATCH | Admin | Approve pending NGOs/Volunteers. |
-| `/admin/pending` | GET | Admin | Queue of verification documents. |
-| `/admin/active-missions`| GET | Admin | System-wide real-time logistics monitoring. |
-| `/reports/donations` | GET | Admin | Master Aggregation (CSV/JSON). |
+| `/api/v1/users/admin/users` | GET | Admin | Full User Management Dashboard. |
+| `/api/v1/users/verify` | PATCH | Admin | Approve pending NGOs/Volunteers KYC. |
+| `/api/v1/users/admin/pending` | GET | Admin | Queue of verification documents. |
+| `/api/v1/donations/admin/active-missions`| GET | Admin | System-wide real-time logistics monitoring. |
+| `/api/v1/reports/donations` | GET | Admin | Master Impact Aggregation (CSV/JSON). |
 
 ---
 
@@ -114,14 +117,20 @@ Uses a weighted matrix to rank NGOs for a donation:
 - **Urgency (20%)**: Distance to expiry date.
 - **Match Rate (10%)**: NGO's historical acceptance of similar food types.
 
-### **2. Logistics Auto-Dispatch (Tiered Notification)**
-When an NGO claims a donation:
-- **Minute 0**: Notify top 3 closest volunteers.
-- **Minute 2**: Open mission to all volunteers in 10km.
-- **Minute 5**: Radius expansion to 20km automatically.
+### **2. Dijkstra-based Routing & Diversion**
+- **Path Optimization**: Integrates Google Maps Matrix API with a cost-basis punishing traffic delays.
+- **Dynamic Diversion**: Auto-scans for critical donations (expiring < 1hr) within 5km of a volunteer's route and auto-injects waypoints.
+- **Fallback Mode**: Gracefully degrades to Haversine approximation if external map APIs fail.
 
-### **3. Safety Supervisor (Cron Jobs)**
-- **Mission Reassignment**: If a volunteer is inactive (no GPS update) for 15 mins while on a mission, the system automatically unassigns them and re-dispatches to others to prevent food spoilage.
+### **3. Offline-First Resilience (State Sync)**
+- **IndexedDB Caching**: Persists mission details and contact info on the client for offline viewing.
+- **Action Queuing**: Strategic actions (Pickup/Deliver) are queued during network drops and synced upon restoration.
+- **RabbitMQ Fallback**: If the async message broker is unreachable, notifications failover to synchronous processing.
+
+### **4. Safety Supervisor & Anomaly Detection**
+- **Cron Watchdog**: Monitors mission latency; unassigns stagnant volunteers after 15 mins of inactivity.
+- **Threshold Alerts**: Triggers load-balancing if an NGO's daily capacity exceeds 80%.
+- **Truth Scores**: Dynamically adjusts 1.0-5.0 scores based on audit rejections and delivery success.
 
 ---
 
