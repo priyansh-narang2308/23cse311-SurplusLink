@@ -74,6 +74,8 @@ export default function UserManagement() {
     }, []);
 
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [userToDelete, setUserToDelete] = useState<string | null>(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isViolationModalOpen, setIsViolationModalOpen] = useState(false);
     const [violationData, setViolationData] = useState({
         violationType: 'hygiene',
@@ -123,12 +125,15 @@ export default function UserManagement() {
         }
     };
 
-    const handleDelete = async (userId: string) => {
-        if (!window.confirm('Are you sure you want to permanently delete this user? This action cannot be undone.')) {
-            return;
-        }
+    const handleDelete = (userId: string) => {
+        setUserToDelete(userId);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!userToDelete) return;
         try {
-            await api.delete(`/users/${userId}`);
+            await api.delete(`/users/${userToDelete}`);
             toast({
                 title: "User Deleted",
                 description: "The user has been removed from the database.",
@@ -141,6 +146,9 @@ export default function UserManagement() {
                 description: "Could not delete user. They might have active dependencies.",
                 variant: "destructive"
             });
+        } finally {
+            setIsDeleteModalOpen(false);
+            setUserToDelete(null);
         }
     };
 
@@ -294,6 +302,39 @@ export default function UserManagement() {
                             onClick={handleLogViolation}
                         >
                             Log Incident & Notify User
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                <DialogContent className="rounded-3xl border-border/50 max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-black tracking-tight text-red-500 flex items-center gap-2">
+                            <Trash2 className="h-6 w-6" />
+                            Delete User
+                        </DialogTitle>
+                        <DialogDescription className="font-medium text-base pt-2">
+                            Are you sure you want to permanently delete this user? <br/>
+                            <span className="text-muted-foreground mt-2 block">
+                                This action cannot be undone and will permanently remove all associated data.
+                            </span>
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter className="gap-2 pt-6">
+                        <Button 
+                            variant="ghost" 
+                            className="h-12 rounded-xl font-bold uppercase tracking-wider text-xs" 
+                            onClick={() => setIsDeleteModalOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            className="bg-red-500 hover:bg-red-600 h-12 flex-1 rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-red-500/20"
+                            onClick={confirmDelete}
+                        >
+                            Yes, permanently delete
                         </Button>
                     </DialogFooter>
                 </DialogContent>
