@@ -1,6 +1,6 @@
 /** Landing page with hero, features, and impact overview */
 import { Navbar } from '@/components/layout/navbar';
-import { Hero } from '@/components/landing/hero';
+import { HeroGeometric } from '@/components/ui/shape-landing-hero';
 import { Features } from '@/components/landing/features';
 import { Process } from '@/components/landing/process';
 import { Impact } from '@/components/landing/impact';
@@ -40,18 +40,19 @@ export default function LandingPage() {
     return (
         <div className="min-h-screen bg-background selection:bg-primary/30 selection:text-primary-foreground relative">
 
-            <div className="fixed inset-0 z-0 pointer-events-none bg-[linear-gradient(to_right,rgba(0,0,0,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.05)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:40px_40px]" />
-
             <Navbar />
 
             <main>
-                <Hero />
+                <HeroGeometric 
+
+                    title1="Eliminate Food Waste"
+                    title2="Empower Communities"
+                />
 
 
 
                 <Features />
                 <Process />
-                <Impact />
                 <FAQ />
 
                 <section className="py-24 relative overflow-hidden">
