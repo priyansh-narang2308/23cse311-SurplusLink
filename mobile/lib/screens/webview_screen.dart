@@ -36,15 +36,12 @@ class _WebViewScreenState extends State<WebViewScreen> {
           },
         ),
       )
-      ..setOnPermissionRequest((request) {
-        request.grant();
-      })
       ..loadRequest(Uri.parse('https://surpluslink.vercel.app/'));
 
-    // Enable geolocation for Android WebView
+    // Enable geolocation for Android WebView using the platform-specific API.
+    // setOnPermissionRequest does NOT exist in webview_flutter 4.x — use this instead.
     final platform = _controller.platform;
     if (platform is AndroidWebViewController) {
-      AndroidWebViewController.enableDebugging(true);
       platform.setGeolocationPermissionsPromptCallbacks(
         onShowPrompt: (request) async {
           return GeolocationPermissionsResponse(allow: true, retain: true);
