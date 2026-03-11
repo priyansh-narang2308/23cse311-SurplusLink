@@ -14,6 +14,7 @@ import {
     getNgoVolunteers,
     getAddressFromCoords,
     updatePreferences,
+    deleteUser
 } from '../controllers/user.controller.js';
 import { protect, roleBasedAccess } from '../middleware/auth.middleware.js';
 import upload from '../config/cloudinary.js';
@@ -34,5 +35,6 @@ userRouter.get('/volunteer/stats', protect, roleBasedAccess(['volunteer']), getV
 userRouter.get('/ngo/volunteers', protect, roleBasedAccess(['ngo']), getNgoVolunteers);
 userRouter.post('/reverse-geocode', protect, getAddressFromCoords);
 userRouter.patch('/preferences', protect, updatePreferences);
+userRouter.delete('/:id', protect, roleBasedAccess(['admin']), deleteUser);
 
 export default userRouter;

@@ -16,7 +16,8 @@ import {
     Loader2,
     ShieldAlert,
     MapPin,
-    FileText
+    FileText,
+    Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -122,6 +123,27 @@ export default function UserManagement() {
         }
     };
 
+    const handleDelete = async (userId: string) => {
+        if (!window.confirm('Are you sure you want to permanently delete this user? This action cannot be undone.')) {
+            return;
+        }
+        try {
+            await api.delete(`/users/${userId}`);
+            toast({
+                title: "User Deleted",
+                description: "The user has been removed from the database.",
+                variant: "success"
+            });
+            fetchUsers();
+        } catch (error) {
+            toast({
+                title: "Deletion Failed",
+                description: "Could not delete user. They might have active dependencies.",
+                variant: "destructive"
+            });
+        }
+    };
+
     const filteredUsers = (users || []).filter(user => {
         if (!user) return false;
         if (user.role === 'admin') return false;
@@ -183,6 +205,7 @@ export default function UserManagement() {
                                         setSelectedUser(user);
                                         setIsViolationModalOpen(true);
                                     }}
+                                    onDelete={handleDelete}
                                 />
                             ))}
                         </AnimatePresence>
@@ -279,7 +302,7 @@ export default function UserManagement() {
     );
 }
 
-function UserCard({ user, onVerify, onReview, onFlag }: { user: User, onVerify: (id: string, s: string) => void, onReview: () => void, onFlag: () => void }) {
+function UserCard({ user, onVerify, onReview, onFlag, onDelete }: { user: User, onVerify: (id: string, s: string) => void, onReview: () => void, onFlag: () => void, onDelete: (id: string) => void }) {
     return (
         <motion.div
             layout
@@ -368,7 +391,6 @@ function UserCard({ user, onVerify, onReview, onFlag }: { user: User, onVerify: 
                             </Button>
                         )
                     )}
-
                     {user.status === 'active' && (
                         <Button
                             variant="outline"
@@ -379,9 +401,19 @@ function UserCard({ user, onVerify, onReview, onFlag }: { user: User, onVerify: 
                             Deactivate
                         </Button>
                     )}
+
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 rounded-lg p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => onDelete(user.id)}
+                        title="Permanently Delete User"
+                    >
+                        <Trash2 size={16} />
+                    </Button>
                 </div>
             </div>
-        </motion.div>
+        </motion.div >
     );
 }
 

@@ -494,6 +494,31 @@ const updatePreferences = async (req, res, next) => {
     }
 };
 
+/**
+ * @desc    Permanently delete a user from the database (Admin Action)
+ * @route   DELETE /api/v1/users/:id
+ * @access  Admin
+ */
+const deleteUser = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        if (user) {
+            if (user.role === 'admin') {
+                res.status(403);
+                throw new Error('Admins cannot be deleted');
+            }
+            await User.findByIdAndDelete(req.params.id);
+            res.json({ message: 'User removed successfully' });
+        } else {
+            res.status(404);
+            throw new Error('User not found');
+        }
+    } catch (error) {
+        next(error);
+    }
+};
+
 export {
     getUserProfile,
     verifyUser,
@@ -508,5 +533,6 @@ export {
     getVolunteerStats,
     getNgoVolunteers,
     getAddressFromCoords,
-    updatePreferences
+    updatePreferences,
+    deleteUser
 };

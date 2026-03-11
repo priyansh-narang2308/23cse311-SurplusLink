@@ -15,16 +15,25 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => {
     const isAvatar = file.fieldname === 'avatar';
-    
-    // Determine resource type: images for avatars, 'auto' for others to handle PDFs correctly
+
+    // Determine resource type: images for avatars, 'auto' for others
     const resourceType = isAvatar ? 'image' : 'auto';
 
-    return {
+    const params = {
       folder: isAvatar ? 'surplus-link-avatars' : 'surplus-link-verifications',
       resource_type: resourceType,
       public_id: `${Date.now()}-${file.originalname.split('.')[0]}`,
-      // Removed forced format: 'pdf' to allow original file extensions to persist
     };
+
+    // If it's a PDF, we must ensure it's handled as a document and has the correct extension
+    if (file.mimetype === 'application/pdf') {
+      params.format = 'pdf';
+      // Forcing resource_type to 'image' for PDFs allows Cloudinary to serve them as documents 
+      // but ensuring the format is 'pdf' ensures the URL ends in .pdf
+      params.resource_type = 'image';
+    }
+
+    return params;
   },
 });
 
