@@ -69,11 +69,28 @@ export function MapPicker({ initialCenter, onLocationSelect }: MapPickerProps) {
     useEffect(() => {
         if (initialCenter) {
             setMarkerPos(initialCenter);
-        } else if (!initialCenter && navigator.geolocation) {
-            // Auto-locate if no initial center is provided
-            fetchCurrentLocation();
+        } else if (navigator.geolocation && !isLocating) {
+            // Auto-locate if no initial center is provided (run once)
+            setIsLocating(true);
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const newPos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                    };
+                    setMarkerPos(newPos);
+                    map?.panTo(newPos);
+                    // Do NOT call onLocationSelect here as it triggers parent re-renders and toasts
+                    setIsLocating(false);
+                },
+                (error) => {
+                    console.error("Error fetching location:", error);
+                    setIsLocating(false);
+                },
+                { enableHighAccuracy: true }
+            );
         }
-    }, [initialCenter, fetchCurrentLocation]);
+    }, [initialCenter, map, isLocating]); // Removed fetchCurrentLocation from dependencies
 
     const onAutocompleteLoad = useCallback((autocompleteInstance: google.maps.places.Autocomplete) => {
         setAutocomplete(autocompleteInstance);

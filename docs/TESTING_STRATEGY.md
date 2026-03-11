@@ -27,8 +27,8 @@ This matrix identifies how each architectural tier is tested and the specific pr
 ### **B. Integration Testing (Service Interoperability)**
 *   **REST API Level**: Using **Supertest/Vitest** to verify end-to-end flows (e.g., Donation Lifecycle, Admin User Verification, and Safety Rule CRUD operations).
 *   **Auth Flow**: Verifies that JWT cookies are correctly issued, stored as `HttpOnly`, and rejected when expired.
-*   **Pathfinding & Routing**: Mocks Google Maps APIs to verify Dijkstra routing responses and fallback approximations when endpoints reject or time out.
-*   **System Degradation**: Simulates RabbitMQ failures to verify synchronous `notification.js` failovers.
+*   **Pathfinding & Routing**: Mocks Google Maps APIs to verify Dijkstra routing responses, waypoint injection for diversions, and fallback approximations.
+*   **System Degradation**: Simulates RabbitMQ failures to verify synchronous `notification.js` failovers and IndexedDB synchronization consistency.
 
 ### **C. System & E2E Testing (User Workflows)**
 *   **The Happy Path**: Manual and automated walkthroughs verifying the sequence:  
@@ -40,15 +40,15 @@ This matrix identifies how each architectural tier is tested and the specific pr
 
 ## 3. Properties Verified per Component
 
-### **1. 🔐 Security & Access Control**
+### **1. Security & Access Control**
 *   **Frontend/Mobile**: Verification that users cannot navigate to unauthorized screens (e.g., Volunteer accessing Admin Analytics).
 *   **Backend**: Ensuring all restricted endpoints require a valid, non-expired JWT.
 
-### **2. 📍 Reliability (Geospatial & Timing)**
+### **2. Reliability (Geospatial & Timing)**
 *   **Backend**: Accuracy of the matching algorithm within a 15km precision.
 *   **System**: Verification that the **Cron Supervisor** correctly unassigns "stalled" missions every 15 minutes.
 
-### **3. ✅ Transactional Integrity (Correctness)**
+### **3. Transactional Integrity (Correctness)**
 *   **Backend**: Atomic mission claiming using MongoDB's unique indexing and conditional updates to prevent data corruption.
 *   **Mobile**: Verification that location updates are correctly transmitted to the backend at specified intervals.
 
@@ -64,4 +64,4 @@ This matrix identifies how each architectural tier is tested and the specific pr
 | **Flutter Test** | Validates cross-platform UI behavior for the volunteer experience. |
 
 --- 
-*Last Updated: February 10, 2026*
+*Last Updated: March 11, 2026*

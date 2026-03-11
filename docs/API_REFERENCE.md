@@ -92,18 +92,14 @@ All error responses follow this standard format:
 ### **Get Suitability-Ranked NGOs**
 `GET /donations/:id/best-ngos`
 - **Access**: Private (Donor/Admin)
-- **Success (200)**:
-```json
-[
-  {
-    "id": "ngo_id_1",
-    "organization": "City Relief",
-    "suitabilityScore": 95,
-    "distance": 1.2,
-    "unmetNeed": 50
-  }
-]
-```
+- **Success (200)**: AI-ranked list based on distance and capacity.
+
+### **Receipt Scanning (OCR)**
+`POST /donations/scan-receipt`
+- **Access**: Private (Donor)
+- **Format**: `multipart/form-data`
+- **Fields**: `receipt` (File)
+- **Effect**: Extracts food details and expiry from grocery receipts.
 
 ---
 
@@ -132,12 +128,12 @@ All error responses follow this standard format:
 
 ### **Safety Audit Rejection**
 `PATCH /donations/:id/reject`
-- **Body**:
-```json
-{
-  "rejectionReason": "Contaminated: Packaging was open upon arrival."
-}
-```
+- **Body**: `{ "rejectionReason": "..." }`
+
+### **Update NGO Settings**
+`PUT /users/profile/ngo`
+- **Access**: Private (NGO)
+- **Body**: `{ "dailyCapacity": 100, "storageTypes": ["cold", "dry"] }`
 
 ---
 
@@ -146,13 +142,18 @@ All error responses follow this standard format:
 ### **Accept Mission (Atomic)**
 `PATCH /donations/:id/accept-mission`
 - **Access**: Private (Volunteer)
-- **Description**: Locks the mission to the volunteer and sets mission state to `pending_pickup`.
+- **Effect**: Locks the mission and sets state to `pending_pickup`.
 
-### **Confirm Pickup (Verification)**
-`PATCH /donations/:id/pickup`
+### **Real-time Status Updates**
+`PATCH /donations/:id/delivery-status`
+- **Body**: `{ "deliveryStatus": "in_transit" }`
+- **Rate Limited**: US 9.1 limits update frequency per mission.
+
+### **Confirm Pickup/Delivery**
+`PATCH /donations/:id/pickup` | `PATCH /donations/:id/deliver`
 - **Format**: `multipart/form-data`
-- **Body**: `photo` (File)
-- **Effect**: Changes `deliveryStatus` to `picked_up`.
+- **Fields**: `photo` (File)
+- **Effect**: Changes mission state; requires photo proof.
 
 ### **Get Optimized Route**
 `GET /donations/:id/optimized-route`
@@ -211,9 +212,9 @@ All error responses follow this standard format:
 
 ---
 
-## 9. Data Models (Core Schemas)
+### **Data Models (Core Schemas)**
 
-### **User Model**
+#### **User Model**
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `name` | String | Legal name of the user. |
@@ -221,20 +222,15 @@ All error responses follow this standard format:
 | `status` | Enum | `pending`, `active`, `deactivated`. |
 | `isOnline` | Boolean | Volunteer availability toggle. |
 | `stats.trustScore` | Number | 1.0 - 5.0 rating dynamically calculated. |
-| `stats.completedDonations` | Number | Incremented automatically upon verified delivery. |
-| `violationCount` | Number | Tracked by admins for suspension logic. |
+| `violationCount` | Number | Tracked by admins for suspension logic (US 9.1). |
 
-### **Donation Model**
+#### **Donation Model**
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `status` | Enum | `active`, `assigned`, `picked_up`, `completed`, `cancelled`, `expired`. |
 | `deliveryStatus`| Enum | `idle`, `pending_pickup`, `heading_to_pickup`, `at_pickup`, `picked_up`, `in_transit`, `arrived_at_delivery`, `delivered`. |
 | `perishability` | Enum | `high`, `medium`, `low`. |
-| `expiryDate` | Date | Evaluated by the Cron Watchdog to auto-expire missions. |
 | `coordinates` | Point | GeoJSON 2dsphere index for Dijkstra optimizations. |
 
-### **AuditLog Model / SafetyRule Model**
-Used for governance (Epic 6). Includes `action`, `category`, `ipAddress`, and dynamic `metadata` for strict compliance tracking.
-
 ---
-*Last Updated: March 2026 (Epic 6-9 Release)*
+*Last Updated: March 11, 2026 (Epic 9 Final Implementation)*
