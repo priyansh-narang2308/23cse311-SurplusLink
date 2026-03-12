@@ -15,6 +15,7 @@ import notificationRoutes from './routes/notification.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import syncRoutes from './routes/sync.routes.js';
+import publicRoutes from './routes/public.routes.js';
 
 
 dotenv.config({ path: './.env' });
@@ -85,6 +86,7 @@ app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/sync', syncRoutes);
+app.use('/api/v1/public', publicRoutes); // No auth — community food board
 
 
 // Error Handling

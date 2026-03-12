@@ -95,6 +95,7 @@ export interface Donation {
   distance?: number;
   donorTrustScore?: number;
   rejectionReason?: string;
+  distributionMode?: 'ngo' | 'open';
   donor?: {
     id: string;
     name: string;

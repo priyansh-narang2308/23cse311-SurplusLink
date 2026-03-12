@@ -49,6 +49,7 @@ import NgoFleetDashboard from "./pages/ngo/fleet";
 import NgoImpactReport from "./pages/ngo/impact-report";
 import { Toaster } from "./components/ui/toaster";
 import { TooltipProvider } from "./components/ui/tooltip";
+import CommunityFoodBoard from "./pages/community-food-board";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,7 @@ const App = () => (
               <BrowserRouter>
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
+                  <Route path="/community" element={<CommunityFoodBoard />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                   <Route path="/reset-password/:token" element={<ResetPasswordPage />} />

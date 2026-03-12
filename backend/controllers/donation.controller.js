@@ -25,6 +25,118 @@ import ImpactMetric from '../models/ImpactMetric.model.js';
 import { convertToWeight, calculateMeals, calculateCo2Savings } from '../utils/impact.js';
 import { analyzeDonationImage } from '../services/azureVision.service.js';
 
+/**
+ * @desc    Public feed of open/direct-pickup donations (no auth required)
+ * @route   GET /api/v1/public/open-donations
+ * @access  Public — no login needed, for community members / passersby
+ */
+export const getOpenPickupDonations = async (req, res) => {
+    try {
+        const now = new Date();
+        const donations = await Donation.find({
+            distributionMode: 'open',
+            status: 'active',
+            expiryDate: { $gt: now },
+        })
+            .select('title description foodType foodCategory quantity pickupAddress pickupWindow expiryDate photos createdAt allergens dietaryTags communityReservations')
+            .sort({ expiryDate: 1 }) // soonest expiry first
+            .limit(50);
+
+        // Return reservation count only (not PII)
+        const sanitized = donations.map(d => ({
+            ...d.toJSON(),
+            reservationCount: d.communityReservations?.length || 0,
+            communityReservations: undefined, // strip PII from public feed
+        }));
+
+        res.json({ donations: sanitized, count: sanitized.length });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+/**
+ * @desc    Soft walk-in reservation for an open-pickup donation (no account required)
+ * @route   POST /api/v1/public/reserve/:id
+ * @access  Public — no login needed
+ */
+export const softReserveDonation = async (req, res) => {
+    try {
+        const { name, phone, needsDelivery } = req.body;
+
+        if (!name || !name.trim()) {
+            return res.status(400).json({ message: 'Your name is required.' });
+        }
+        if (!phone || !phone.trim()) {
+            return res.status(400).json({ message: 'Your phone number is required.' });
+        }
+
+        const donation = await Donation.findById(req.params.id);
+
+        if (!donation) return res.status(404).json({ message: 'Donation not found' });
+        if (donation.distributionMode !== 'open') return res.status(400).json({ message: 'This donation is not open for community pickup' });
+        if (donation.status !== 'active') return res.status(400).json({ message: 'This donation is no longer available' });
+        if (new Date(donation.expiryDate) < new Date()) return res.status(400).json({ message: 'This donation has expired' });
+
+        // Prevent same phone re-reserving
+        if (donation.communityReservations.some(r => r.phone === phone.trim())) {
+            return res.status(400).json({ message: 'You have already reserved this item' });
+        }
+
+        donation.communityReservations.push({
+            name: name.trim(),
+            phone: phone.trim(),
+            needsDelivery: !!needsDelivery,
+            reservedAt: new Date(),
+        });
+        await donation.save();
+
+        res.json({
+            message: needsDelivery
+                ? 'Delivery request noted! A volunteer will be in touch.'
+                : 'Reservation noted! Head to the pickup address.',
+            reservationCount: donation.communityReservations.length,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+/**
+ * @desc    Public list of open-pickup donations that have delivery requests from community members
+ * @route   GET /api/v1/public/open-delivery-requests
+ * @access  Public (used by volunteer available-missions page)
+ */
+export const getOpenDeliveryRequests = async (req, res) => {
+    try {
+        const now = new Date();
+        // Find active open-pickup donations that have at least one reservation needing delivery
+        const donations = await Donation.find({
+            distributionMode: 'open',
+            status: 'active',
+            expiryDate: { $gt: now },
+            'communityReservations.needsDelivery': true,
+        })
+            .select('title description foodType foodCategory quantity pickupAddress pickupWindow expiryDate photos createdAt communityReservations')
+            .sort({ expiryDate: 1 })
+            .limit(50);
+
+        const result = donations.map(d => {
+            const deliveryRequests = d.communityReservations.filter(r => r.needsDelivery);
+            return {
+                ...d.toJSON(),
+                deliveryRequestCount: deliveryRequests.length,
+                // Include only name (no phone) for volunteer display
+                deliveryRequesters: deliveryRequests.map(r => ({ name: r.name, reservedAt: r.reservedAt })),
+                communityReservations: undefined,
+            };
+        });
+
+        res.json({ donations: result, count: result.length });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
 /**
  * @desc    Create a new donation posting
@@ -49,6 +161,7 @@ export const createDonation = async (req, res) => {
             dietaryTags,
             storageReq,
             foodCategory,
+            distributionMode,
         } = req.body;
 
         const parseJsonField = (val) => {
@@ -131,6 +244,7 @@ export const createDonation = async (req, res) => {
             donor: req.user._id,
             storageReq,
             foodCategory,
+            distributionMode: distributionMode === 'open' ? 'open' : 'ngo',
         };
 
         //automated address-to-coordinate conversion (geocoding)
@@ -179,8 +293,7 @@ export const createDonation = async (req, res) => {
             metadata: { donationId: donation._id, title: donation.title },
         });
 
-        //notify all nearby ngos brodcast
-
+        //notify all nearby ngos broadcast
         try {
             // Notify Donor
             await createNotification(
@@ -191,39 +304,51 @@ export const createDonation = async (req, res) => {
                 { title }
             );
 
-            // US 8.2: Geo-based and Capacity-aware alert logic
-            const nearbyNgos = await User.find({
-                role: 'ngo',
-                status: 'active',
-                location: {
-                    $near: {
-                        $geometry: donation.coordinates,
-                        $maxDistance: 15000 // 15km radius
-                    }
-                }
-            });
-
-            // Capacity & Storage Filter
-            const targetNgos = nearbyNgos.filter(ngo => {
-                // 1. Storage Facility Check
-                if (storageReq && ngo.ngoProfile?.storageFacilities?.length > 0) {
-                    if (!ngo.ngoProfile.storageFacilities.includes(storageReq)) return false;
-                }
-
-                // 2. Daily Capacity Check (Basic: Must have some capacity defined)
-                if (ngo.ngoProfile?.dailyCapacity <= 0) return false;
-
-                return true;
-            });
-
-            for (const ngo of targetNgos) {
+            // For open/direct-pickup donations, skip NGO broadcast
+            if (donation.distributionMode === 'open') {
+                // Just confirm to the donor — the item is listed publicly
                 await createNotification(
-                    ngo._id,
-                    'donation_created',
-                    'donation_created',
+                    req.user._id,
+                    'general',
+                    'general',
                     donation._id,
-                    { title }
+                    { title, message: 'Your donation is now open for direct community pickup.' }
                 );
+            } else {
+                // US 8.2: Geo-based and Capacity-aware alert logic for NGOs
+                const nearbyNgos = await User.find({
+                    role: 'ngo',
+                    status: 'active',
+                    location: {
+                        $near: {
+                            $geometry: donation.coordinates,
+                            $maxDistance: 15000 // 15km radius
+                        }
+                    }
+                });
+
+                // Capacity & Storage Filter
+                const targetNgos = nearbyNgos.filter(ngo => {
+                    // 1. Storage Facility Check
+                    if (storageReq && ngo.ngoProfile?.storageFacilities?.length > 0) {
+                        if (!ngo.ngoProfile.storageFacilities.includes(storageReq)) return false;
+                    }
+
+                    // 2. Daily Capacity Check (Basic: Must have some capacity defined)
+                    if (ngo.ngoProfile?.dailyCapacity <= 0) return false;
+
+                    return true;
+                });
+
+                for (const ngo of targetNgos) {
+                    await createNotification(
+                        ngo._id,
+                        'donation_created',
+                        'donation_created',
+                        donation._id,
+                        { title }
+                    );
+                }
             }
         } catch (notifyError) {
             console.error('Broadcast notification failed:', notifyError);

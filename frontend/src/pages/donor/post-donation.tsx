@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import {
   Upload, MapPin, Clock, Package, Lock, AlertTriangle, X, Check,
-  ScanLine, Sparkles, FileText, Loader2, ChevronDown, ChevronUp,
+  ScanLine, Sparkles, FileText, Loader2, ChevronDown, ChevronUp, Users2, Building2 as Building,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { VerificationBanner } from '@/components/layout/verification-banner';
@@ -257,6 +257,7 @@ export default function PostDonation() {
   const [customAllergen, setCustomAllergen] = useState('');
   // Track which fields were auto-filled from the scan for highlight animation
   const [scannedFields, setScannedFields] = useState<Set<string>>(new Set());
+  const [distributionMode, setDistributionMode] = useState<'ngo' | 'open'>('ngo');
 
   const isVerified = user?.status === 'active';
 
@@ -421,6 +422,7 @@ export default function PostDonation() {
 
       formData.append('allergens', JSON.stringify(selectedAllergens));
       formData.append('dietaryTags', JSON.stringify(selectedDietary));
+      formData.append('distributionMode', distributionMode);
 
       photos.forEach((photo) => {
         formData.append('photos', photo);
@@ -429,8 +431,10 @@ export default function PostDonation() {
       await DonationService.createDonation(formData);
 
       toast({
-        title: "Donation Posted!",
-        description: "Your surplus food is now available for NGOs.",
+        title: distributionMode === 'open' ? '🤝 Donation Listed for Open Pickup!' : 'Donation Posted!',
+        description: distributionMode === 'open'
+          ? 'Your surplus food is now available for direct community pickup.'
+          : 'Your surplus food is now available for NGOs.',
       });
       navigate('/donor');
     } catch (error: unknown) {
@@ -457,8 +461,81 @@ export default function PostDonation() {
       <VerificationBanner />
       <PageHeader
         title="Post a Donation"
-        description="Share your surplus food with NGOs in your area."
+        description="Share your surplus food. Choose who can receive it — NGOs or open community pickup."
       />
+
+      {/* ── Distribution Mode Selector ── */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        {/* NGO Mode */}
+        <button
+          type="button"
+          id="mode-ngo"
+          onClick={() => setDistributionMode('ngo')}
+          className={cn(
+            'relative flex flex-col items-start gap-3 p-5 rounded-2xl border-2 text-left transition-all duration-200 group',
+            distributionMode === 'ngo'
+              ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
+              : 'border-border hover:border-primary/40 hover:bg-muted/40'
+          )}
+        >
+          {distributionMode === 'ngo' && (
+            <span className="absolute top-3 right-3 flex items-center justify-center h-5 w-5 rounded-full bg-primary">
+              <Check className="h-3 w-3 text-white" />
+            </span>
+          )}
+          <div className={cn(
+            'h-12 w-12 rounded-xl flex items-center justify-center transition-colors',
+            distributionMode === 'ngo' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'
+          )}>
+            <Building className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="font-black text-sm uppercase tracking-tight">NGO / Food Bank</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Routed to verified NGOs, shelters & food banks. Best for large or packaged quantities.
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">Recommended</span>
+          </div>
+        </button>
+
+        {/* Open / Direct Pickup Mode */}
+        <button
+          type="button"
+          id="mode-open"
+          onClick={() => setDistributionMode('open')}
+          className={cn(
+            'relative flex flex-col items-start gap-3 p-5 rounded-2xl border-2 text-left transition-all duration-200 group',
+            distributionMode === 'open'
+              ? 'border-orange-400 bg-orange-50/40 dark:bg-orange-950/20 shadow-lg shadow-orange-500/10'
+              : 'border-border hover:border-orange-300 hover:bg-orange-50/20 dark:hover:bg-orange-950/10'
+          )}
+        >
+          {distributionMode === 'open' && (
+            <span className="absolute top-3 right-3 flex items-center justify-center h-5 w-5 rounded-full bg-orange-500">
+              <Check className="h-3 w-3 text-white" />
+            </span>
+          )}
+          <div className={cn(
+            'h-12 w-12 rounded-xl flex items-center justify-center transition-colors',
+            distributionMode === 'open' ? 'bg-orange-500 text-white' : 'bg-muted text-muted-foreground group-hover:bg-orange-100 group-hover:text-orange-600 dark:group-hover:bg-orange-950'
+          )}>
+            <Users2 className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="font-black text-sm uppercase tracking-tight">Open Community Pickup</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Anyone nearby — homeless, passersby, or community members — can walk in and take the food directly.
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-600 border border-orange-200 dark:border-orange-800">Small Quantities</span>
+          </div>
+        </button>
+      </div>
+
+
 
       {/* ── Receipt Scanner — shown prominently at top ── */}
       <ReceiptScannerPanel onFieldsFilled={handleScannedFields} disabled={!isVerified} />

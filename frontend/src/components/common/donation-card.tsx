@@ -3,7 +3,7 @@ import { Donation } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { MapPin, Clock, Package, Calendar, CheckCircle, Zap, ShieldAlert, Navigation } from 'lucide-react';
+import { MapPin, Clock, Package, Calendar, CheckCircle, Zap, ShieldAlert, Navigation, Users2 } from 'lucide-react';
 import { getTimeUntil, formatTime } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 
@@ -158,6 +158,12 @@ export function DonationCard({
             <Badge className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 flex items-center gap-1">
               <Zap className="h-3 w-3 fill-indigo-700" />
               AI: {donation.azureAiDetection.foodName}
+            </Badge>
+          )}
+          {donation.distributionMode === 'open' && (
+            <Badge className="text-xs bg-orange-100 text-orange-700 border border-orange-200 font-bold flex items-center gap-1">
+              <Users2 className="h-3 w-3" />
+              Open Pickup
             </Badge>
           )}
         </div>

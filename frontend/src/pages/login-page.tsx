@@ -11,7 +11,7 @@ import { motion } from 'framer-motion';
 
 import { UserRole } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Building2, Heart, Shield, Zap, CheckCircle2, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { ArrowLeft, Building2, Heart, Shield, Zap, CheckCircle2, Eye, EyeOff, KeyRound, Users2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Logo } from '@/components/ui/logo';
@@ -207,11 +207,19 @@ export default function LoginPage() {
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="absolute top-4 left-4 lg:top-8 lg:left-8 z-50"
+        className="absolute top-4 left-4 lg:top-8 lg:left-8 z-50 flex items-center gap-2"
       >
         <Link to="/" className="group flex items-center gap-2 bg-card/50 backdrop-blur-md border border-border/50 px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl lg:rounded-2xl hover:bg-card hover:border-primary/30 transition-all shadow-sm">
           <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
           <span className="text-xs lg:text-sm font-semibold">Back to Home</span>
+        </Link>
+        <Link
+          to="/community"
+          id="community-board-link"
+          className="group flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 lg:px-5 lg:py-2.5 rounded-xl lg:rounded-2xl transition-all shadow-sm shadow-orange-500/20"
+        >
+          <Users2 className="h-4 w-4" />
+          <span className="text-xs lg:text-sm font-semibold">Community Board</span>
         </Link>
       </motion.div>
 

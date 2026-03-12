@@ -101,6 +101,20 @@ const donationSchema = new mongoose.Schema(
         rejectionReason: {
             type: String,
         },
+        distributionMode: {
+            type: String,
+            enum: ['ngo', 'open'],
+            default: 'ngo',
+        },
+        // Soft walk-in reservations for open-pickup donations (no account required)
+        communityReservations: [
+            {
+                name: { type: String, required: true },
+                phone: { type: String, required: true },
+                needsDelivery: { type: Boolean, default: false },
+                reservedAt: { type: Date, default: Date.now },
+            }
+        ],
         feedback: {
             rating: { type: Number, min: 1, max: 5 },
             comment: { type: String },
