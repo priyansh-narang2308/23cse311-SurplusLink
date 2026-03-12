@@ -1682,8 +1682,8 @@ export const getOptimizedRoute = async (req, res, next) => {
             {
                 id: 'dropoff',
                 type: 'dropoff',
-                coordinates: (donation.claimedBy?.location?.coordinates && donation.claimedBy.location.coordinates[0] !== 0) 
-                    ? donation.claimedBy.location.coordinates 
+                coordinates: (donation.claimedBy?.location?.coordinates && donation.claimedBy.location.coordinates[0] !== 0)
+                    ? donation.claimedBy.location.coordinates
                     : donation.coordinates.coordinates, // Fallback to pickup if NGO location is missing
                 address: donation.claimedBy?.address || 'NGO Distribution Center',
                 priority: 5

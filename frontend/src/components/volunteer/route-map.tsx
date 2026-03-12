@@ -56,7 +56,7 @@ export function RouteMap({ donorCoords, ngoCoords, volunteerCoords, diversionCoo
         if (stops && stops.length > 0) {
             // Using optimized stops sequence from backend
             const stopPoints = stops.map(s => ({ lat: s.coordinates[1], lng: s.coordinates[0] }));
-            
+
             if (!volunteerCoords) {
                 // If volunteer position is unknown, start from first stop and go to last
                 origin = stopPoints[0];
