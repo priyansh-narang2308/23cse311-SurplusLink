@@ -43,7 +43,7 @@ export default function LandingPage() {
             <Navbar />
 
             <main>
-                <HeroGeometric 
+                <HeroGeometric
 
                     title1="Eliminate Food Waste"
                     title2="Empower Communities"
