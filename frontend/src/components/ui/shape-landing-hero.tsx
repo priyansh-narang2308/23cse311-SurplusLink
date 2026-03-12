@@ -42,16 +42,27 @@ function FloatingFoodIcon({
         >
             <motion.div
                 animate={{
-                    y: [0, 15, 0],
+                    y: [0, 60, 0],
+                    x: [0, 40, 0],
+                    rotate: [0, 10, -10, 0],
                 }}
                 transition={{
-                    duration: 12,
+                    duration: 4,
                     repeat: Number.POSITIVE_INFINITY,
                     ease: "easeInOut",
                 }}
                 className="relative"
             >
-                <div
+                <motion.div
+                    animate={{
+                        scale: [1, 1.2, 1],
+                        rotate: [0, 5, -5, 0],
+                    }}
+                    transition={{
+                        duration: 3,
+                        repeat: Number.POSITIVE_INFINITY,
+                        ease: "easeInOut",
+                    }}
                     className={cn(
                         "flex items-center justify-center p-6 rounded-3xl",
                         "bg-gradient-to-br to-transparent",
@@ -61,7 +72,7 @@ function FloatingFoodIcon({
                     )}
                 >
                     <Icon size={size} className="text-emerald-500/80 drop-shadow-md" />
-                </div>
+                </motion.div>
             </motion.div>
         </motion.div>
     );
@@ -89,7 +100,21 @@ function HeroGeometric({
 
     return (
         <div className="relative min-h-[80vh] w-full flex items-center justify-center overflow-hidden bg-background pt-32 md:pt-40 pb-20">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.05] via-transparent to-teal-500/[0.05] blur-3xl" />
+            {/* Enhanced animated background gradient */}
+            <motion.div 
+                animate={{
+                    scale: [1, 1.4, 1],
+                    rotate: [0, 8, -8, 0],
+                    x: [0, 40, 0],
+                    y: [0, -25, 0],
+                }}
+                transition={{
+                    duration: 8,
+                    repeat: Number.POSITIVE_INFINITY,
+                    ease: "easeInOut",
+                }}
+                className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.05] via-transparent to-teal-500/[0.05] blur-3xl" 
+            />
 
             <div className="absolute inset-0 overflow-hidden">
                 <FloatingFoodIcon
